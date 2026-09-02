@@ -1,0 +1,20 @@
+{
+  "alert_name": "CONNECTION_POOL_EXHAUSTED in orders-api",
+  "service": "orders-api",
+  "environment": "production",
+  "error": "CONNECTION_POOL_EXHAUSTED",
+  "error_message": "HikariPool-1 - Connection is not available, request timed out after 30000ms (total=50, active=50, idle=0, waiting=87)",
+  "logs": [
+    "2026-08-31T14:20:11.004Z WARN  [orders-api] HikariPool-1 - Thread starvation or clock leap detected",
+    "2026-08-31T14:20:41.771Z ERROR [orders-api] SQLTransientConnectionException: request timed out after 30000ms",
+    "2026-08-31T14:21:02.330Z ERROR [orders-api] 503 returned for POST /orders (p99 latency 31.4s)"
+  ],
+  "timeline": [
+    "14:05:00 \u2014 Nightly reconciliation job started holding long transactions",
+    "14:20:11 \u2014 Pool saturation first observed",
+    "14:22:00 \u2014 Order API error rate reached 64%"
+  ],
+  "severity": "critical",
+  "timestamp": null,
+  "request": "Investigate CONNECTION_POOL_EXHAUSTED in orders-api (production)"
+}

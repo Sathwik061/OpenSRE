@@ -1,0 +1,14 @@
+{
+  "alert_name": "CONDITION_ERROR \u00b7 Process_1tesanw",
+  "service": "Process_1tesanw",
+  "environment": "production",
+  "error": "CONDITION_ERROR",
+  "error_message": "Expected at least one condition to evaluate to true, or to have a default flow",
+  "logs": [
+    "Expected at least one condition to evaluate to true, or to have a default flow"
+  ],
+  "timeline": [],
+  "severity": "high",
+  "timestamp": null,
+  "request": "Investigate CONDITION_ERROR in Process_1tesanw (production)"
+}

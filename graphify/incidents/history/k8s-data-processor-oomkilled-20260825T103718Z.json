@@ -1,0 +1,19 @@
+{
+  "alert_name": "k8s-data-processor-oomkilled",
+  "service": "data-processor",
+  "environment": "production",
+  "error": "OOMKilled",
+  "error_message": "Container exceeded memory limit and was killed by the OOM killer",
+  "logs": [
+    "2026-08-25T10:37:18Z WARN  kubelet         Pod data-processor memory usage at 95% of limit",
+    "2026-08-25T10:37:18Z ERROR kubelet         OOMKilling container: memory cgroup out of memory",
+    "2026-08-25T10:37:18Z INFO  kubelet         Pod data-processor restarted (restartCount: 5)"
+  ],
+  "timeline": [
+    "10:37:18 data-processor healthy",
+    "10:37:18 memory usage exceeded 80%",
+    "10:37:18 memory usage exceeded 95%",
+    "10:37:18 OOMKilled \u2014 pod restarted"
+  ],
+  "request": "Determine what failed, identify the most likely root cause using the supplied evidence, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}

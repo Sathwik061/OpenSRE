@@ -1,0 +1,19 @@
+{
+  "alert_name": "tls-certificate-expired",
+  "service": "api-gateway",
+  "environment": "production",
+  "error": "SSL Certificate Expired",
+  "error_message": "TLS handshake failed: certificate has expired",
+  "logs": [
+    "2026-08-25T10:39:03Z ERROR nginx          SSL: error:14094415:SSL routines: certificate expired",
+    "2026-08-25T10:39:03Z ERROR api-gateway    TLS handshake failed for upstream billing-service",
+    "2026-08-25T10:39:03Z WARN  cert-manager   Certificate billing-service-tls expires in -1 days"
+  ],
+  "timeline": [
+    "10:39:03 cert-manager warning: expiry in 7 days (alert missed)",
+    "10:39:03 certificate expired",
+    "10:39:03 TLS handshake failures begin",
+    "10:39:03 all requests to billing-service failing"
+  ],
+  "request": "Determine what failed, identify the most likely root cause using the supplied evidence, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}

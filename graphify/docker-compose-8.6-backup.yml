@@ -1,0 +1,94 @@
+services:
+  # ────────────────────────────────────────────────────────────────────────────
+  # Elasticsearch (Single-Node, lightweight 512MB RAM)
+  # ────────────────────────────────────────────────────────────────────────────
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: graphify-elasticsearch
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cat/health | grep -q green || curl -s http://localhost:9200/_cat/health | grep -q yellow"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    restart: unless-stopped
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Camunda 8 Zeebe Engine
+  # ────────────────────────────────────────────────────────────────────────────
+  camunda:
+    image: camunda/zeebe:8.6.9
+    container_name: graphify-camunda8
+    ports:
+      - "26500:26500"   # Zeebe gRPC Gateway
+      - "8080:8080"     # Zeebe REST Gateway
+      - "9600:9600"     # Actuator / Metrics
+    environment:
+      - ZEEBE_BROKER_GATEWAY_ENABLE=true
+      - ZEEBE_BROKER_NETWORK_HOST=0.0.0.0
+      - ZEEBE_BROKER_DATA_DISKUSAGEMONITORINGENABLED=false
+      - ZEEBE_BROKER_DATA_DISKUSAGECOMMANDWATERMARK=0.95
+      - ZEEBE_BROKER_DATA_DISKUSAGEREPLICATIONWATERMARK=0.98
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_CLASSNAME=io.camunda.zeebe.exporter.ElasticsearchExporter
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_ARGS_URL=http://elasticsearch:9200
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_ARGS_BULK_SIZE=1
+    volumes:
+      - camunda8_data:/usr/local/zeebe/data
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Camunda 8 Operate Web UI (http://localhost:8081) — demo / demo
+  # ────────────────────────────────────────────────────────────────────────────
+  operate:
+    image: camunda/operate:8.6.9
+    container_name: graphify-operate
+    ports:
+      - "8081:8080"
+    environment:
+      - CAMUNDA_OPERATE_ZEEBE_GATEWAYADDRESS=camunda:26500
+      - CAMUNDA_OPERATE_ZEEBE_RESTADDRESS=http://camunda:8080
+      - CAMUNDA_OPERATE_ZEEBE_PLAINTEXT=true
+      - CAMUNDA_OPERATE_ELASTICSEARCH_URL=http://elasticsearch:9200
+      - CAMUNDA_OPERATE_ZEEBEELASTICSEARCH_URL=http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      camunda:
+        condition: service_started
+    restart: unless-stopped
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Camunda 8 Tasklist Web UI (http://localhost:8082) — demo / demo
+  # ────────────────────────────────────────────────────────────────────────────
+  tasklist:
+    image: camunda/tasklist:8.6.9
+    container_name: graphify-tasklist
+    ports:
+      - "8082:8080"
+    environment:
+      - CAMUNDA_TASKLIST_ZEEBE_GATEWAYADDRESS=camunda:26500
+      - CAMUNDA_TASKLIST_ZEEBE_RESTADDRESS=http://camunda:8080
+      - CAMUNDA_TASKLIST_ZEEBE_PLAINTEXT=true
+      - CAMUNDA_TASKLIST_ELASTICSEARCH_URL=http://elasticsearch:9200
+      - CAMUNDA_TASKLIST_ZEEBEELASTICSEARCH_URL=http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      camunda:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  elastic_data:
+  camunda8_data:

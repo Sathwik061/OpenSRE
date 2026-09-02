@@ -1,0 +1,14 @@
+{
+  "alert_name": "CONDITION_ERROR \u00b7 RequestCarInsuranceProcess",
+  "service": "RequestCarInsuranceProcess",
+  "environment": "production",
+  "error": "CONDITION_ERROR",
+  "error_message": "Expected at least one condition to evaluate to true, or to have a default flow",
+  "logs": [
+    "Expected at least one condition to evaluate to true, or to have a default flow"
+  ],
+  "timeline": [],
+  "severity": "high",
+  "timestamp": null,
+  "request": "Investigate CONDITION_ERROR in RequestCarInsuranceProcess (production)"
+}

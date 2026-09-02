@@ -1,0 +1,14 @@
+{
+  "alert_name": "unknown-service-unknown-error",
+  "service": "unknown-service",
+  "environment": "production",
+  "error": "Unknown Error",
+  "error_message": "No error message provided",
+  "logs": [],
+  "timeline": [
+    "2026-08-25T09:12:30Z unknown-service error detected"
+  ],
+  "severity": "high",
+  "timestamp": "2026-08-25T09:12:30Z",
+  "request": "Determine what failed, identify the most likely root cause using the supplied evidence, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}

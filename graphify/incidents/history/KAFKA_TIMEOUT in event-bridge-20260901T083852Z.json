@@ -1,0 +1,20 @@
+{
+  "alert_name": "KAFKA_TIMEOUT in event-bridge",
+  "service": "event-bridge",
+  "environment": "production",
+  "error": "KAFKA_TIMEOUT",
+  "error_message": "Expiring 148 record(s) for topic order-events-0: 120000 ms has passed since batch creation",
+  "logs": [
+    "2026-08-31T16:44:02.119Z WARN  [event-bridge] Connection to node 3 (broker-3:9092) could not be established",
+    "2026-08-31T16:45:12.884Z ERROR [event-bridge] TimeoutException: Expiring 148 record(s) for order-events-0",
+    "2026-08-31T16:45:13.002Z ERROR [event-bridge] producer buffer 96% full, backpressure engaged"
+  ],
+  "timeline": [
+    "16:41:00 \u2014 Broker-3 rolling restart initiated by platform team",
+    "16:44:02 \u2014 Producer lost leader for partition 0",
+    "16:45:12 \u2014 Record batches expired, downstream events dropped"
+  ],
+  "severity": "high",
+  "timestamp": null,
+  "request": "Investigate KAFKA_TIMEOUT in event-bridge (production)"
+}

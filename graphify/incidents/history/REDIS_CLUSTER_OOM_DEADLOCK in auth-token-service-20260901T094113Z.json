@@ -1,0 +1,21 @@
+{
+  "alert_name": "REDIS_CLUSTER_OOM_DEADLOCK in auth-token-service",
+  "service": "auth-token-service",
+  "environment": "production",
+  "error": "REDIS_CLUSTER_OOM_DEADLOCK",
+  "error_message": "OOM command not allowed when used memory > 'maxmemory' (64GB reached). Redis cluster failover timed out after 15000ms.",
+  "logs": [
+    "2026-09-01 15:05:01.102 [ERROR] [redis-client-pool] Connection pool exhausted: 128 of 128 active connections blocked waiting for cluster slot 14920",
+    "2026-09-01 15:05:03.450 [ERROR] [auth-jwt-validator] Command failed: OOM command not allowed when used memory > 'maxmemory'",
+    "2026-09-01 15:05:08.891 [FATAL] [auth-token-service] Redis node 10.0.4.12:6379 marked as FAIL. Sentinel failover aborted: quorum not reached (1/3 replicas responding)",
+    "2026-09-01 15:05:12.301 [CRITICAL] [ingress-gateway] 502 Bad Gateway returned for 1,420 token verification requests"
+  ],
+  "timeline": [
+    "15:04:30 \u2014 Spike in token refresh traffic due to mobile app batch synchronization",
+    "15:05:01 \u2014 Redis primary node exceeded 64GB maxmemory policy (noeviction configured)",
+    "15:05:12 \u2014 Downstream microservices unable to validate user bearer tokens"
+  ],
+  "severity": "critical",
+  "timestamp": null,
+  "request": "Investigate REDIS_CLUSTER_OOM_DEADLOCK in auth-token-service (production)"
+}

@@ -1,0 +1,19 @@
+{
+  "alert_name": "cache-service-redis-refused",
+  "service": "cache-service",
+  "environment": "production",
+  "error": "Connection Refused",
+  "error_message": "Redis connection refused: ECONNREFUSED 127.0.0.1:6379",
+  "logs": [
+    "2026-08-25T10:38:30Z ERROR cache-service   Redis connection refused: ECONNREFUSED 127.0.0.1:6379",
+    "2026-08-25T10:38:30Z ERROR redis           MISCONF Redis is configured to save RDB snapshots",
+    "2026-08-25T10:38:30Z WARN  redis           Can't save in background: fork: Cannot allocate memory"
+  ],
+  "timeline": [
+    "10:38:30 redis healthy",
+    "10:38:30 redis failed to fork for RDB snapshot",
+    "10:38:30 redis stopped accepting connections",
+    "10:38:30 cache-service ECONNREFUSED"
+  ],
+  "request": "Determine what failed, identify the most likely root cause using the supplied evidence, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}

@@ -1,0 +1,18 @@
+{
+  "alert_name": "payment-service-connectionrefusederror",
+  "service": "payment-service",
+  "environment": "development",
+  "error": "ConnectionRefusedError",
+  "error_message": "Connection refused to postgres:5432 \u2014 database is restarting",
+  "logs": [
+    "2026-08-25T09:38:16Z ERROR payment-service  ConnectionRefusedError: Connection refused to postgres:5432 \u2014 database is restarting",
+    "2026-08-25T09:38:16Z TRACE payment-service  ConnectionRefusedError: Connection refused to postgres:5432 \u2014 database is restarting"
+  ],
+  "timeline": [
+    "2026-08-25T09:38:16Z ERROR payment-service  ConnectionRefusedError: Connection r",
+    "2026-08-25T09:38:16Z TRACE payment-service  ConnectionRefusedError: Connection r"
+  ],
+  "severity": "high",
+  "timestamp": "2026-08-25T09:38:19Z",
+  "request": "Determine what failed, identify the most likely root cause using the supplied evidence, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}

@@ -1,0 +1,37 @@
+# ==============================================================================
+# Camunda 8.9 Self-Managed Orchestration Stack
+# Consolidated Zeebe Engine + Operate + Tasklist (v8.9.17)
+# ==============================================================================
+services:
+  camunda-data-init:
+    image: camunda/camunda:8.9.17
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c", "chown -R 1001:1001 /usr/local/camunda/camunda-data && chmod 775 /usr/local/camunda/camunda-data"]
+    volumes:
+      - camunda-data:/usr/local/camunda/camunda-data
+    restart: "no"
+
+  orchestration:
+    image: camunda/camunda:8.9.17
+    container_name: graphify-camunda89
+    ports:
+      - "26500:26500"   # Zeebe gRPC Gateway
+      - "8080:8080"     # Camunda 8.9 Unified Web (Operate / Tasklist / Zeebe REST)
+      - "9600:9600"     # Actuator / Metrics
+    environment:
+      - CAMUNDA_OPERATE_CSRF_PREVENTION_ENABLED=false
+      - CAMUNDA_TASKLIST_CSRF_PREVENTION_ENABLED=false
+      - ZEEBE_BROKER_GATEWAY_ENABLE=true
+      - ZEEBE_BROKER_NETWORK_HOST=0.0.0.0
+      - RESOURCE_AUTHORIZATIONS_ENABLED=false
+    volumes:
+      - camunda-data:/usr/local/camunda/camunda-data
+      - camunda-db:/usr/local/camunda/data
+    depends_on:
+      camunda-data-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  camunda-data:
+  camunda-db:

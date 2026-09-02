@@ -1,0 +1,19 @@
+{
+  "alert_name": "api-gateway-http-500",
+  "service": "api-gateway",
+  "environment": "production",
+  "error": "HTTP 500 Internal Server Error",
+  "error_message": "Unhandled exception in request pipeline: NullPointerException",
+  "logs": [
+    "2026-08-25T10:36:42Z ERROR api-gateway   NullPointerException in middleware chain",
+    "2026-08-25T10:36:42Z ERROR api-gateway   Failed to deserialize response from user-service",
+    "2026-08-25T10:36:42Z WARN  user-service  Schema version mismatch: expected v2, got v1"
+  ],
+  "timeline": [
+    "10:36:42 api-gateway deployed (new version)",
+    "10:36:42 user-service schema unchanged",
+    "10:36:42 first 500 error reported",
+    "10:36:42 error rate reached 100%"
+  ],
+  "request": "Determine what failed, identify the most likely root cause using the supplied evidence, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}

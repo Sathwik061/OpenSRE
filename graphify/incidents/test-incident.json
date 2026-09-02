@@ -1,0 +1,20 @@
+{
+  "alert_name": "payment-service-failure",
+  "service": "payment-service",
+  "environment": "development",
+  "error": "HTTP 500 Internal Server Error",
+  "error_message": "Failed to process payment request",
+  "logs": [
+    "2026-08-25T13:40:01Z ERROR payment-service Payment request failed: connection refused to postgres:5432",
+    "2026-08-25T13:39:30Z INFO  payment-service PostgreSQL connection pool initialized",
+    "2026-08-25T13:39:31Z ERROR postgres         database restarting",
+    "2026-08-25T13:39:32Z ERROR postgres         database recovery in progress"
+  ],
+  "timeline": [
+    "13:39:30 payment-service healthy",
+    "13:39:31 PostgreSQL restarted",
+    "13:39:32 PostgreSQL recovery started",
+    "13:40:01 payment-service returned HTTP 500"
+  ],
+  "request": "Determine what failed, identify the most likely root cause using the supplied evidence, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}

@@ -1,0 +1,20 @@
+{
+  "alert_name": "HTTP_500 in payment-gateway",
+  "service": "payment-gateway",
+  "environment": "production",
+  "error": "HTTP_500",
+  "error_message": "Upstream payment gateway returned 500 Internal Server Error for POST /charges",
+  "logs": [
+    "2026-08-31T18:02:41.552Z ERROR [payment-gateway] 500 from provider api.pay-provider.io /v1/charges",
+    "2026-08-31T18:02:41.559Z ERROR [checkout-worker] job failed, retries=0 remaining",
+    "2026-08-31T18:03:00.100Z ERROR [zeebe-broker] Incident created type=JOB_NO_RETRIES"
+  ],
+  "timeline": [
+    "18:00:20 \u2014 Provider status page reported degraded performance",
+    "18:02:41 \u2014 First 500 responses observed",
+    "18:05:00 \u2014 214 checkouts failed, revenue impact detected"
+  ],
+  "severity": "critical",
+  "timestamp": null,
+  "request": "Investigate HTTP_500 in payment-gateway (production)"
+}

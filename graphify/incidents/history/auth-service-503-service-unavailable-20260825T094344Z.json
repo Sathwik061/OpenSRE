@@ -1,0 +1,20 @@
+{
+  "alert_name": "auth-service-503-service-unavailable",
+  "service": "auth-service",
+  "environment": "production",
+  "error": "503 Service Unavailable",
+  "error_message": "Upstream timeout: identity-provider did not respond within 30s",
+  "logs": [
+    "2026-08-25T09:13:32Z ERROR auth-service       upstream call to identity-provider timed out after 30s",
+    "2026-08-25T09:13:32Z WARN  identity-provider  high CPU detected \u2014 response degraded",
+    "2026-08-25T09:13:32Z ERROR auth-service       circuit breaker opened"
+  ],
+  "timeline": [
+    "2026-08-25T09:13:32Z ERROR auth-service       upstream call to identity-provider",
+    "2026-08-25T09:13:32Z WARN  identity-provider  high CPU detected \u2014 response degra",
+    "2026-08-25T09:13:32Z ERROR auth-service       circuit breaker opened"
+  ],
+  "severity": "high",
+  "timestamp": "2026-08-25T09:43:44Z",
+  "request": "Determine what failed, identify the most likely root cause using the supplied evidence, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}

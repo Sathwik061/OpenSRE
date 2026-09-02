@@ -1,0 +1,1 @@
+{"alert_name": "redis-connection-refused", "service": "payment-service", "severity": "critical", "error_message": "Connection refused to Redis at redis.prod:6379", "timestamp": "2026-08-26T05:00:00Z"}

@@ -1,0 +1,14 @@
+{
+  "alert_name": "payment-service-auto-error",
+  "service": "payment-service",
+  "environment": "development",
+  "error": "ConnectionRefusedError",
+  "error_message": "Connection refused to postgres:5432 \u2014 database is restarting",
+  "logs": [
+    "2026-08-25T09:38:16Z ERROR payment-service  ConnectionRefusedError: Connection refused to postgres:5432 \u2014 database is restarting",
+    "2026-08-25T09:38:16Z TRACE payment-service  ConnectionRefusedError: Connection refused to postgres:5432 \u2014 database is restarting"
+  ],
+  "timeline": [
+    "09:38:16 ConnectionRefusedError raised in payment-service"
+  ]
+}

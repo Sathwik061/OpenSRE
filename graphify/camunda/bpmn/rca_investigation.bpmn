@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions
+  xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"
+  xmlns:modeler="http://camunda.org/schema/modeler/1.0"
+  id="Definitions_graphify_rca"
+  targetNamespace="http://bpmn.io/schema/bpmn"
+  exporter="Camunda Modeler"
+  exporterVersion="5.27.0"
+  modeler:executionPlatform="Camunda Cloud"
+  modeler:executionPlatformVersion="8.6.0">
+
+  <bpmn:process id="RCA_Investigation" name="Graphify RCA Investigation" isExecutable="true">
+
+    <bpmn:startEvent id="Event_Start" name="Error Detected">
+      <bpmn:outgoing>Flow_to_rca</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask id="Task_RCA" name="Run RCA Investigation">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="rca-investigation" retries="2" />
+        <zeebe:ioMapping>
+          <zeebe:input source="=service"       target="service" />
+          <zeebe:input source="=error_type"    target="error_type" />
+          <zeebe:input source="=error_message" target="error_message" />
+          <zeebe:input source="=environment"   target="environment" />
+          <zeebe:input source="=logs"          target="logs" />
+          <zeebe:output source="=rca_result"   target="rca_result" />
+          <zeebe:output source="=rca_status"   target="rca_status" />
+          <zeebe:output source="=rca_incident" target="rca_incident" />
+        </zeebe:ioMapping>
+        <zeebe:taskHeaders>
+          <zeebe:header key="pipeline" value="graphify-rca" />
+          <zeebe:header key="version"  value="2.0" />
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_to_rca</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="Event_End" name="RCA Complete">
+      <bpmn:incoming>Flow_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_to_rca" sourceRef="Event_Start" targetRef="Task_RCA" />
+    <bpmn:sequenceFlow id="Flow_to_end" sourceRef="Task_RCA"    targetRef="Event_End" />
+
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="RCA_Investigation">
+
+      <bpmndi:BPMNShape id="Shape_Start" bpmnElement="Event_Start">
+        <dc:Bounds x="162" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="148" y="205" width="64" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Shape_RCA" bpmnElement="Task_RCA">
+        <dc:Bounds x="270" y="140" width="160" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Shape_End" bpmnElement="Event_End">
+        <dc:Bounds x="502" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="487" y="205" width="66" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Edge_to_rca" bpmnElement="Flow_to_rca">
+        <di:waypoint x="198" y="180" />
+        <di:waypoint x="270" y="180" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Edge_to_end" bpmnElement="Flow_to_end">
+        <di:waypoint x="430" y="180" />
+        <di:waypoint x="502" y="180" />
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

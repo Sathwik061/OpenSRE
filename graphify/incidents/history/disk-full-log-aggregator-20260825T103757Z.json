@@ -1,0 +1,20 @@
+{
+  "alert_name": "disk-full-log-aggregator",
+  "service": "log-aggregator",
+  "environment": "production",
+  "error": "No space left on device",
+  "error_message": "Write failed: disk partition /var/log at 100% capacity",
+  "logs": [
+    "2026-08-25T10:37:57Z WARN  log-aggregator  disk usage at 98% \u2014 1 minute ago",
+    "2026-08-25T10:37:57Z ERROR log-aggregator  write: no space left on device (/var/log)",
+    "2026-08-25T10:37:57Z ERROR postgres        could not write to WAL: no space left on device"
+  ],
+  "timeline": [
+    "10:37:57 disk at 90%",
+    "10:37:57 disk at 98%",
+    "10:37:57 disk at 100%",
+    "10:37:57 log-aggregator write errors begin",
+    "10:37:57 postgres WAL write failed"
+  ],
+  "request": "Determine what failed, identify the most likely root cause using the supplied evidence, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}
