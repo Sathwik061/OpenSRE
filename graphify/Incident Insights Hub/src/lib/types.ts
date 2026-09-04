@@ -37,6 +37,14 @@ export interface CamundaVariable {
   processInstanceKey?: string;
 }
 
+export interface DocumentationReference {
+  section?: string;
+  title?: string;
+  url?: string;
+  relevance?: string;
+  camunda_version?: string;
+}
+
 export interface RcaReport {
   summary: string;
   root_cause: string;
@@ -46,6 +54,10 @@ export interface RcaReport {
   recommended_actions: string[];
   /** BPMN topology structural warnings (parallel deadlock, missing boundary, etc.) */
   topology_warnings?: string[];
+  /** Official Camunda documentation links and rules cited during RCA */
+  documentation_references?: DocumentationReference[];
+  /** Specific Camunda engine version pinned for this RCA */
+  camunda_version?: string;
 }
 
 export interface InvestigationResult {
@@ -54,6 +66,7 @@ export interface InvestigationResult {
   rca: RcaReport;
   raw_output?: string;
   incident_file?: string;
+  camunda_version?: string;
 }
 
 export interface InvestigatePayload {
@@ -64,6 +77,7 @@ export interface InvestigatePayload {
   error_message: string;
   logs: string[];
   timeline: string[];
+  camunda_version?: string;
   severity: Severity;
   request?: string;
 }

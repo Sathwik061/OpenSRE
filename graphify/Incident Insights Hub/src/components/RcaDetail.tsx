@@ -3,7 +3,6 @@ import {
   AlertCircle,
   AlertTriangle,
   BookOpen,
-  Bot,
   BrainCircuit,
   CheckCircle2,
   ChevronDown,
@@ -11,6 +10,7 @@ import {
   Copy,
   Database,
   Download,
+  ExternalLink,
   ListChecks,
   Loader2,
   Quote,
@@ -244,6 +244,11 @@ export function RcaDetail({
             <div className="flex flex-wrap items-center gap-2">
               <SeverityBadge severity={record.severity} />
               <TypeChip type={record.errorType} />
+              {(record.rca?.camunda_version || record.camunda_version) ? (
+                <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-blue-600 dark:text-blue-400">
+                  Camunda {record.rca?.camunda_version || record.camunda_version}
+                </span>
+              ) : null}
               <span className="text-xs text-muted-foreground font-mono">{record.environment}</span>
             </div>
             <h2 className="text-lg font-bold tracking-tight text-foreground">{record.title}</h2>
@@ -330,34 +335,6 @@ export function RcaDetail({
         ) : null}
       </div>
 
-      {/* AI Engine Status Banner matching Terminal Log */}
-      {rca ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-xs">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary">
-              <Bot className="size-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 font-semibold text-foreground">
-                <span>AI Engine: DGX Qwen 35B</span>
-                <span className="text-[11px] font-normal text-muted-foreground">(localhost:8000 via SSH tunnel)</span>
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                Model: <code className="font-mono text-primary font-medium">nvidia/Qwen3.6-35B-A3B-NVFP4</code> · Zero-Hallucination SRE Agent
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 font-mono text-[11px] dark:text-emerald-400">
-              🟢 {rca.confidence || "HIGH"} Confidence
-            </Badge>
-            <Badge variant="outline" className="border-border bg-background text-[11px] text-muted-foreground font-mono">
-              ⚡ Deterministic Runbook
-            </Badge>
-          </div>
-        </div>
-      ) : null}
 
       {/* Process Variables at Failure */}
       {record.variables && Object.keys(record.variables).length > 0 ? (
@@ -484,6 +461,50 @@ export function RcaDetail({
               ))}
             </ol>
           </Section>
+
+          {/* Official Camunda Documentation References */}
+          {rca.documentation_references && rca.documentation_references.length > 0 ? (
+            <Section
+              title={`📚 Camunda ${rca.camunda_version || record.camunda_version || "8.9"} Documentation & Rules`}
+              icon={BookOpen}
+              accent="text-blue-600"
+            >
+              <div className="space-y-2.5">
+                {rca.documentation_references.map((doc, i) => (
+                  <div
+                    key={i}
+                    className="flex flex-col gap-1 rounded-md border border-blue-200/70 bg-blue-50/50 p-3 text-xs dark:border-blue-900/50 dark:bg-blue-950/20"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-blue-900 dark:text-blue-300">
+                          {doc.section || doc.title || "Camunda Documentation"}
+                        </span>
+                        <span className="rounded bg-blue-100 px-1.5 py-0.5 font-mono text-[9px] font-bold text-blue-800 dark:bg-blue-900/60 dark:text-blue-300">
+                          v{doc.camunda_version || rca.camunda_version || record.camunda_version || "8.9"}
+                        </span>
+                      </div>
+                      {doc.url ? (
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 font-mono text-[11px] font-medium text-blue-600 hover:underline dark:text-blue-400"
+                        >
+                          View Official Doc <ExternalLink className="size-3" />
+                        </a>
+                      ) : null}
+                    </div>
+                    {doc.relevance ? (
+                      <p className="text-muted-foreground leading-relaxed">
+                        {doc.relevance}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </Section>
+          ) : null}
         </>
       ) : (
         <Section title="No RCA generated yet" icon={BrainCircuit}>

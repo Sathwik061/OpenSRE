@@ -1,0 +1,23 @@
+{
+  "alert_name": "auth-service-503-service-unavailable",
+  "service": "auth-service",
+  "environment": "staging",
+  "error": "503 Service Unavailable",
+  "error_message": "Upstream timeout after 30s",
+  "logs": [
+    "2026-09-04T09:20:35Z ERROR auth-service upstream timeout"
+  ],
+  "timeline": [
+    "2026-09-04T09:20:35Z ERROR auth-service upstream timeout"
+  ],
+  "severity": "high",
+  "timestamp": "2026-09-04T09:20:35Z",
+  "variables": null,
+  "bpmn_topology": null,
+  "element_id": null,
+  "element_name": null,
+  "process_id": null,
+  "instance_key": null,
+  "incident_key": null,
+  "request": "Determine what failed, identify the most likely root cause using the supplied evidence, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}

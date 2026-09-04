@@ -1,0 +1,26 @@
+{
+  "alert_name": "payment-service-failure",
+  "service": "payment-service",
+  "environment": "development",
+  "error": "HTTP 500 Internal Server Error",
+  "error_message": "Failed to process payment request",
+  "logs": [
+    "2026-09-04T10:08:08Z ERROR payment-service connection refused to postgres:5432",
+    "2026-09-04T10:08:08Z ERROR postgres         database restarting"
+  ],
+  "timeline": [
+    "10:08:08 PostgreSQL restarted",
+    "10:08:08 payment-service HTTP 500"
+  ],
+  "severity": "high",
+  "timestamp": null,
+  "variables": null,
+  "bpmn_topology": null,
+  "element_id": null,
+  "element_name": null,
+  "process_id": null,
+  "instance_key": null,
+  "incident_key": null,
+  "camunda_version": "8.6",
+  "request": "Determine what failed, identify the most likely root cause using the supplied evidence, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}

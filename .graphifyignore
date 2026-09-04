@@ -1,0 +1,10 @@
+node_modules/
+.git/
+.output/
+.tanstack/
+.wrangler/
+__pycache__/
+*.pyc
+.pytest_cache/
+bun.lock
+package-lock.json

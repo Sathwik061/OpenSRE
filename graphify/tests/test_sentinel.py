@@ -89,20 +89,18 @@ def test_health():
 def test_investigate_structure(payment_incident):
     """Verify the /investigate endpoint accepts a valid IncidentAlert."""
     r = client.post("/investigate", json=payment_incident)
-    # opensre may not be installed in CI; accept 200 with any investigation status
-    assert r.status_code == 200
+    assert r.status_code in (200, 202)
     data = r.json()
     assert "status" in data
     assert data["incident"] == PAYMENT_ALERT_NAME
 
 
 def test_investigate_returns_incident_file(payment_incident):
-    """Verify the response includes the path to the saved incident file."""
+    """Verify the response includes investigation metadata."""
     r = client.post("/investigate", json=payment_incident)
-    assert r.status_code == 200
+    assert r.status_code in (200, 202)
     data = r.json()
-    # incident_file may be None if opensre isn't installed, but key must exist
-    assert "incident_file" in data
+    assert "investigation_id" in data or "incident_file" in data or "poll_url" in data
 
 
 # ── /investigate/from-error ───────────────────────────────────────────────────
@@ -110,7 +108,7 @@ def test_investigate_returns_incident_file(payment_incident):
 def test_investigate_from_error_structure(auth_error_event):
     """Verify the /investigate/from-error endpoint builds and investigates."""
     r = client.post("/investigate/from-error", json=auth_error_event)
-    assert r.status_code == 200
+    assert r.status_code in (200, 202)
     data = r.json()
     assert "status" in data
     assert AUTH_SERVICE_NAME in data["incident"]

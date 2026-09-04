@@ -1,0 +1,608 @@
+[
+  {
+    "id": "error-events",
+    "file": "error-events.md",
+    "title": "Error Events",
+    "doc_url": "https://docs.camunda.io/docs/components/modeler/bpmn/error-events/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/modeler/bpmn/error-events/error-events.md",
+    "error_types": [
+      "UNHANDLED_ERROR_EVENT",
+      "ERROR_EVENT",
+      "ERROR_CODE_UNHANDLED"
+    ],
+    "element_types": [
+      "boundaryEvent",
+      "endEvent",
+      "subProcess",
+      "errorEventDefinition"
+    ],
+    "tags": [
+      "UNHANDLED_ERROR_EVENT",
+      "error boundary",
+      "error catch",
+      "error throw",
+      "errorCode",
+      "error event subprocess",
+      "unhandled error",
+      "error code",
+      "boundaryEvent",
+      "catch error",
+      "scope escalation",
+      "error propagation"
+    ],
+    "priority": "critical",
+    "summary": "Explains how Camunda 8 handles BPMN error throw/catch events, error boundaries, and unhandled error event incidents.",
+    "last_fetched": "2026-09-04T07:08:40.581782+00:00"
+  },
+  {
+    "id": "exclusive-gateways",
+    "file": "exclusive-gateways.md",
+    "title": "Exclusive Gateways (XOR)",
+    "doc_url": "https://docs.camunda.io/docs/components/modeler/bpmn/exclusive-gateways/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/modeler/bpmn/exclusive-gateways/exclusive-gateways.md",
+    "error_types": [
+      "CONDITION_ERROR",
+      "EXTRACT_VALUE_ERROR",
+      "NO_MATCHING_CONDITION"
+    ],
+    "element_types": [
+      "exclusiveGateway",
+      "sequenceFlow"
+    ],
+    "tags": [
+      "CONDITION_ERROR",
+      "exclusiveGateway",
+      "XOR",
+      "default flow",
+      "condition expression",
+      "FEEL expression",
+      "outgoing sequence flow",
+      "no condition evaluated to true",
+      "boolean condition",
+      "gateway routing"
+    ],
+    "priority": "critical",
+    "summary": "Explains exclusive gateway conditional evaluation, default sequence flows, and CONDITION_ERROR when no branch matches.",
+    "last_fetched": "2026-09-04T07:08:40.959838+00:00"
+  },
+  {
+    "id": "parallel-gateways",
+    "file": "parallel-gateways.md",
+    "title": "Parallel Gateways (Fork & Join)",
+    "doc_url": "https://docs.camunda.io/docs/components/modeler/bpmn/parallel-gateways/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/modeler/bpmn/parallel-gateways/parallel-gateways.md",
+    "error_types": [
+      "PARALLEL_DEADLOCK",
+      "TOKEN_STARVATION",
+      "DEADLOCK"
+    ],
+    "element_types": [
+      "parallelGateway"
+    ],
+    "tags": [
+      "parallelGateway",
+      "fork",
+      "join",
+      "deadlock",
+      "token starvation",
+      "concurrent branches",
+      "synchronization",
+      "incoming tokens",
+      "bypassed join",
+      "token waiting",
+      "parallel join"
+    ],
+    "priority": "critical",
+    "summary": "Explains parallel fork and join token mechanics, synchronization rules, and deadlock risks when one branch is bypassed.",
+    "last_fetched": "2026-09-04T07:08:41.296767+00:00"
+  },
+  {
+    "id": "inclusive-gateways",
+    "file": "inclusive-gateways.md",
+    "title": "Inclusive Gateways (OR)",
+    "doc_url": "https://docs.camunda.io/docs/components/modeler/bpmn/inclusive-gateways/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/modeler/bpmn/inclusive-gateways/inclusive-gateways.md",
+    "error_types": [
+      "CONDITION_ERROR",
+      "INCLUSIVE_GATEWAY_ERROR"
+    ],
+    "element_types": [
+      "inclusiveGateway"
+    ],
+    "tags": [
+      "inclusiveGateway",
+      "OR",
+      "default flow",
+      "condition evaluation",
+      "split",
+      "join",
+      "synchronization"
+    ],
+    "priority": "high",
+    "summary": "Rules for inclusive gateways (OR splits/joins) evaluating multiple concurrent conditional outgoing sequence flows.",
+    "last_fetched": "2026-09-04T07:08:42.371660+00:00"
+  },
+  {
+    "id": "event-based-gateways",
+    "file": "event-based-gateways.md",
+    "title": "Event-Based Gateways",
+    "doc_url": "https://docs.camunda.io/docs/components/modeler/bpmn/event-based-gateways/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/modeler/bpmn/event-based-gateways/event-based-gateways.md",
+    "error_types": [
+      "EVENT_BASED_GATEWAY_ERROR",
+      "RACE_CONDITION"
+    ],
+    "element_types": [
+      "eventBasedGateway"
+    ],
+    "tags": [
+      "eventBasedGateway",
+      "race condition",
+      "message event",
+      "timer event",
+      "signal event",
+      "branch selection"
+    ],
+    "priority": "high",
+    "summary": "Rules governing event-based gateways waiting for competing intermediate catch events or receive tasks.",
+    "last_fetched": "2026-09-04T07:08:43.464791+00:00"
+  },
+  {
+    "id": "service-tasks",
+    "file": "service-tasks.md",
+    "title": "Service Tasks & Job Workers",
+    "doc_url": "https://docs.camunda.io/docs/components/modeler/bpmn/service-tasks/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/modeler/bpmn/service-tasks/service-tasks.md",
+    "error_types": [
+      "JOB_NO_RETRIES",
+      "JOB_WORKER_ERROR",
+      "CONNECTOR_ERROR",
+      "TASK_TIMEOUT"
+    ],
+    "element_types": [
+      "serviceTask"
+    ],
+    "tags": [
+      "serviceTask",
+      "jobType",
+      "job worker",
+      "retries",
+      "headers",
+      "zeebe:taskDefinition",
+      "zeebe:taskHeaders",
+      "worker timeout",
+      "backoff",
+      "incident on zero retries"
+    ],
+    "priority": "critical",
+    "summary": "Explains service task job definitions, job polling by workers, retry counters, and incident generation on zero retries.",
+    "last_fetched": "2026-09-04T07:08:44.533602+00:00"
+  },
+  {
+    "id": "user-tasks",
+    "file": "user-tasks.md",
+    "title": "User Tasks & Form Binding",
+    "doc_url": "https://docs.camunda.io/docs/components/modeler/bpmn/user-tasks/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/modeler/bpmn/user-tasks/user-tasks.md",
+    "error_types": [
+      "USER_TASK_ERROR",
+      "FORM_NOT_FOUND",
+      "ASSIGNMENT_ERROR"
+    ],
+    "element_types": [
+      "userTask"
+    ],
+    "tags": [
+      "userTask",
+      "formId",
+      "formKey",
+      "formBinding",
+      "assignee",
+      "candidateGroups",
+      "candidateUsers",
+      "user task completion",
+      "FORM_NOT_FOUND",
+      "camunda form"
+    ],
+    "priority": "critical",
+    "summary": "Explains user task lifecycle, form binding (formId vs formKey), assignee expressions, and FORM_NOT_FOUND errors.",
+    "last_fetched": "2026-09-04T07:08:45.104911+00:00"
+  },
+  {
+    "id": "call-activities",
+    "file": "call-activities.md",
+    "title": "Call Activities (Sub-Processes)",
+    "doc_url": "https://docs.camunda.io/docs/components/modeler/bpmn/call-activities/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/modeler/bpmn/call-activities/call-activities.md",
+    "error_types": [
+      "CALLED_ELEMENT_ERROR",
+      "CALLED_PROCESS_NOT_FOUND",
+      "VARIABLE_MAPPING_ERROR"
+    ],
+    "element_types": [
+      "callActivity"
+    ],
+    "tags": [
+      "callActivity",
+      "calledElement",
+      "processId",
+      "in mapping",
+      "out mapping",
+      "sub-process instance",
+      "CALLED_ELEMENT_ERROR",
+      "process definition key"
+    ],
+    "priority": "critical",
+    "summary": "Explains call activity invocation, calledElement process definitions, variable input/output propagation, and missing process errors.",
+    "last_fetched": "2026-09-04T07:08:45.447338+00:00"
+  },
+  {
+    "id": "timer-events",
+    "file": "timer-events.md",
+    "title": "Timer Events",
+    "doc_url": "https://docs.camunda.io/docs/components/modeler/bpmn/timer-events/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/modeler/bpmn/timer-events/timer-events.md",
+    "error_types": [
+      "TIMER_ERROR",
+      "INVALID_DATE_TIME",
+      "TIMER_EXPRESSION_ERROR"
+    ],
+    "element_types": [
+      "timerEventDefinition",
+      "intermediateCatchEvent",
+      "boundaryEvent",
+      "startEvent"
+    ],
+    "tags": [
+      "timer",
+      "timeDuration",
+      "timeDate",
+      "timeCycle",
+      "ISO 8601",
+      "timer boundary event",
+      "timer catch event",
+      "timer expression",
+      "PT1H"
+    ],
+    "priority": "high",
+    "summary": "Timer event specifications (date, duration, cycle in ISO 8601 or FEEL), interrupting and non-interrupting boundary timers.",
+    "last_fetched": "2026-09-04T07:08:45.779633+00:00"
+  },
+  {
+    "id": "message-events",
+    "file": "message-events.md",
+    "title": "Message Events & Correlation",
+    "doc_url": "https://docs.camunda.io/docs/components/modeler/bpmn/message-events/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/modeler/bpmn/message-events/message-events.md",
+    "error_types": [
+      "MESSAGE_CORRELATION_ERROR",
+      "MESSAGE_NAME_MISSING",
+      "CORRELATION_KEY_ERROR"
+    ],
+    "element_types": [
+      "messageEventDefinition",
+      "intermediateCatchEvent",
+      "intermediateThrowEvent",
+      "boundaryEvent",
+      "receiveTask"
+    ],
+    "tags": [
+      "message",
+      "correlationKey",
+      "message correlation",
+      "message name",
+      "ttl",
+      "time-to-live",
+      "subscription",
+      "publish message",
+      "message buffer"
+    ],
+    "priority": "critical",
+    "summary": "Message subscriptions, correlation keys, TTL buffering, and correlation failure troubleshooting.",
+    "last_fetched": "2026-09-04T07:08:46.129159+00:00"
+  },
+  {
+    "id": "signal-events",
+    "file": "signal-events.md",
+    "title": "Signal Events",
+    "doc_url": "https://docs.camunda.io/docs/components/modeler/bpmn/signal-events/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/modeler/bpmn/signal-events/signal-events.md",
+    "error_types": [
+      "SIGNAL_ERROR",
+      "SIGNAL_BROADCAST_ERROR"
+    ],
+    "element_types": [
+      "signalEventDefinition",
+      "intermediateCatchEvent",
+      "intermediateThrowEvent",
+      "boundaryEvent"
+    ],
+    "tags": [
+      "signal",
+      "broadcast",
+      "signal catch",
+      "signal throw",
+      "signal name",
+      "global broadcast"
+    ],
+    "priority": "medium",
+    "summary": "Signal event broadcast semantics across all active process instances.",
+    "last_fetched": "2026-09-04T07:08:46.461222+00:00"
+  },
+  {
+    "id": "terminate-events",
+    "file": "terminate-events.md",
+    "title": "Terminate End Events",
+    "doc_url": "https://docs.camunda.io/docs/components/modeler/bpmn/terminate-events/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/modeler/bpmn/terminate-events/terminate-events.md",
+    "error_types": [
+      "TERMINATE_END_EVENT",
+      "SCOPE_TERMINATION"
+    ],
+    "element_types": [
+      "terminateEventDefinition",
+      "endEvent"
+    ],
+    "tags": [
+      "terminate end event",
+      "scope termination",
+      "cancel tokens",
+      "process termination",
+      "parallel termination",
+      "deadlock resolution"
+    ],
+    "priority": "high",
+    "summary": "Behavior of terminate end events terminating the current scope and consuming all active concurrent tokens.",
+    "last_fetched": "2026-09-04T07:08:46.783594+00:00"
+  },
+  {
+    "id": "compensation-events",
+    "file": "compensation-events.md",
+    "title": "Compensation Events",
+    "doc_url": "https://docs.camunda.io/docs/components/modeler/bpmn/compensation-events/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/modeler/bpmn/compensation-events/compensation-events.md",
+    "error_types": [
+      "COMPENSATION_ERROR"
+    ],
+    "element_types": [
+      "compensateEventDefinition",
+      "boundaryEvent",
+      "intermediateThrowEvent"
+    ],
+    "tags": [
+      "compensation",
+      "undo",
+      "compensation boundary event",
+      "compensation handler",
+      "activityRef"
+    ],
+    "priority": "medium",
+    "summary": "Compensation handling and undo mechanisms for completed activities.",
+    "last_fetched": "2026-09-04T07:08:47.124696+00:00"
+  },
+  {
+    "id": "multi-instance",
+    "file": "multi-instance.md",
+    "title": "Multi-Instance Activities",
+    "doc_url": "https://docs.camunda.io/docs/components/modeler/bpmn/multi-instance/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/modeler/bpmn/multi-instance/multi-instance.md",
+    "error_types": [
+      "MULTI_INSTANCE_ERROR",
+      "INPUT_COLLECTION_ERROR",
+      "OUTPUT_COLLECTION_ERROR"
+    ],
+    "element_types": [
+      "multiInstanceLoopCharacteristics"
+    ],
+    "tags": [
+      "multi-instance",
+      "inputCollection",
+      "inputElement",
+      "outputCollection",
+      "outputElement",
+      "completionCondition",
+      "parallel multi-instance",
+      "sequential multi-instance",
+      "loopCardinality"
+    ],
+    "priority": "high",
+    "summary": "Parallel and sequential multi-instance loop execution, collection variable binding, and completion conditions.",
+    "last_fetched": "2026-09-04T07:08:47.455243+00:00"
+  },
+  {
+    "id": "embedded-subprocesses",
+    "file": "embedded-subprocesses.md",
+    "title": "Embedded Subprocesses",
+    "doc_url": "https://docs.camunda.io/docs/components/modeler/bpmn/embedded-subprocesses/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/modeler/bpmn/embedded-subprocesses/embedded-subprocesses.md",
+    "error_types": [
+      "SUBPROCESS_ERROR",
+      "VARIABLE_SCOPE_ERROR"
+    ],
+    "element_types": [
+      "subProcess"
+    ],
+    "tags": [
+      "subProcess",
+      "embedded subprocess",
+      "variable scope",
+      "start event",
+      "end event",
+      "boundary events on subprocess"
+    ],
+    "priority": "high",
+    "summary": "Embedded subprocess scoping rules, local variables, and boundary catch event handling on subprocess containers.",
+    "last_fetched": "2026-09-04T07:08:47.763559+00:00"
+  },
+  {
+    "id": "event-subprocesses",
+    "file": "event-subprocesses.md",
+    "title": "Event Subprocesses",
+    "doc_url": "https://docs.camunda.io/docs/components/modeler/bpmn/event-subprocesses/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/modeler/bpmn/event-subprocesses/event-subprocesses.md",
+    "error_types": [
+      "EVENT_SUBPROCESS_ERROR",
+      "UNHANDLED_ERROR_EVENT"
+    ],
+    "element_types": [
+      "subProcess"
+    ],
+    "tags": [
+      "event subprocess",
+      "triggeredByEvent",
+      "error event subprocess",
+      "message event subprocess",
+      "timer event subprocess",
+      "interrupting vs non-interrupting"
+    ],
+    "priority": "high",
+    "summary": "Event subprocess triggers, interrupting and non-interrupting event start behavior, and error catch scoping.",
+    "last_fetched": "2026-09-04T07:08:48.113824+00:00"
+  },
+  {
+    "id": "data-flow",
+    "file": "data-flow.md",
+    "title": "Data Flow & Variable Mapping",
+    "doc_url": "https://docs.camunda.io/docs/components/modeler/bpmn/data-flow/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/modeler/bpmn/data-flow.md",
+    "error_types": [
+      "VARIABLE_MAPPING_ERROR",
+      "IO_MAPPING_ERROR",
+      "EXTRACT_VALUE_ERROR"
+    ],
+    "element_types": [
+      "ioMapping",
+      "inputOutput",
+      "zeebe:ioMapping"
+    ],
+    "tags": [
+      "data flow",
+      "ioMapping",
+      "input mapping",
+      "output mapping",
+      "variable scope",
+      "FEEL expression",
+      "target variable",
+      "source expression"
+    ],
+    "priority": "critical",
+    "summary": "Zeebe variable scoping, input mappings, output mappings, and FEEL data transformations.",
+    "last_fetched": "2026-09-04T07:08:48.450609+00:00"
+  },
+  {
+    "id": "expressions",
+    "file": "expressions.md",
+    "title": "FEEL Expressions & Evaluation",
+    "doc_url": "https://docs.camunda.io/docs/components/concepts/expressions/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/concepts/expressions.md",
+    "error_types": [
+      "FEEL_EVALUATION_ERROR",
+      "CONDITION_ERROR",
+      "EXTRACT_VALUE_ERROR"
+    ],
+    "element_types": [
+      "conditionExpression"
+    ],
+    "tags": [
+      "FEEL",
+      "expressions",
+      "null check",
+      "list operators",
+      "string functions",
+      "boolean logic",
+      "feel evaluation error",
+      "expression syntax",
+      "unary test"
+    ],
+    "priority": "critical",
+    "summary": "Friendly Enterprise Exception Language (FEEL) expression syntax, null-handling, type conversions, and evaluation rules.",
+    "last_fetched": "2026-09-04T07:08:48.768696+00:00"
+  },
+  {
+    "id": "variables",
+    "file": "variables.md",
+    "title": "Variables & Scoping",
+    "doc_url": "https://docs.camunda.io/docs/components/concepts/variables/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/concepts/variables.md",
+    "error_types": [
+      "VARIABLE_NOT_FOUND",
+      "VARIABLE_SCOPE_ERROR",
+      "TYPE_MISMATCH"
+    ],
+    "element_types": [
+      "process",
+      "subProcess",
+      "task"
+    ],
+    "tags": [
+      "variables",
+      "variable scope",
+      "local variable",
+      "root scope",
+      "JSON variables",
+      "variable propagation",
+      "variable shadowing"
+    ],
+    "priority": "critical",
+    "summary": "Camunda 8 variable scopes, payload sizes, shadowing rules, and instance variable visibility.",
+    "last_fetched": "2026-09-04T07:08:49.370378+00:00"
+  },
+  {
+    "id": "incidents",
+    "file": "incidents.md",
+    "title": "Incidents & Error Lifecycle",
+    "doc_url": "https://docs.camunda.io/docs/components/concepts/incidents/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/concepts/incidents.md",
+    "error_types": [
+      "INCIDENT",
+      "UNHANDLED_ERROR_EVENT",
+      "CONDITION_ERROR",
+      "EXTRACT_VALUE_ERROR",
+      "CALLED_ELEMENT_ERROR",
+      "JOB_NO_RETRIES"
+    ],
+    "element_types": [
+      "processInstance"
+    ],
+    "tags": [
+      "incidents",
+      "incident types",
+      "resolve incident",
+      "retry",
+      "incident lifecycle",
+      "Zeebe incident",
+      "Operate incident",
+      "incident resolution"
+    ],
+    "priority": "critical",
+    "summary": "Incident creation triggers, incident types, automatic retries vs manual resolution, and Operate incident handling.",
+    "last_fetched": "2026-09-04T07:08:49.706811+00:00"
+  },
+  {
+    "id": "process-instance-modification",
+    "file": "process-instance-modification.md",
+    "title": "Process Instance Modification",
+    "doc_url": "https://docs.camunda.io/docs/components/concepts/process-instance-modification/",
+    "github_url": "https://raw.githubusercontent.com/camunda/camunda-docs/main/docs/components/concepts/process-instance-modification.md",
+    "error_types": [
+      "MODIFICATION_ERROR",
+      "STUCK_INSTANCE",
+      "REPAIR_INSTANCE"
+    ],
+    "element_types": [
+      "processInstance"
+    ],
+    "tags": [
+      "process instance modification",
+      "activate token",
+      "cancel token",
+      "move token",
+      "instance repair",
+      "Operate modification",
+      "remediation"
+    ],
+    "priority": "high",
+    "summary": "How to repair stuck or failing process instances by activating or cancelling tokens at specific flow nodes via Operate / Zeebe API.",
+    "last_fetched": "2026-09-04T07:08:50.059696+00:00"
+  }
+]

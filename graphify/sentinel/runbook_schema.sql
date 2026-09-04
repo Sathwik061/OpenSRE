@@ -17,6 +17,7 @@ create table runbooks (
   observed_facts      jsonb         not null default '[]'::jsonb,
   evidence            jsonb         not null default '[]'::jsonb,
   topology_warnings   jsonb         not null default '[]'::jsonb,
+  documentation_references jsonb    not null default '[]'::jsonb,
   confidence          text          not null default 'HIGH',
   source              text          not null default 'ai_generated',
   incident_key        text,

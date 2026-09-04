@@ -29,6 +29,14 @@ export function recordToMarkdown(r: HistoryRecord): string {
     lines.push(`## HOW to fix it`);
     r.rca.recommended_actions?.forEach((a, i) => lines.push(`${i + 1}. ${a}`));
     lines.push("");
+    if (r.rca.documentation_references && r.rca.documentation_references.length > 0) {
+      const ver = r.rca.camunda_version || r.camunda_version || "8.9";
+      lines.push(`## Camunda ${ver} Documentation References`);
+      r.rca.documentation_references.forEach((doc) => {
+        lines.push(`- **${doc.section || doc.title || "Camunda Doc"}:** ${doc.url ?? ""} — ${doc.relevance ?? ""}`);
+      });
+      lines.push("");
+    }
     lines.push(`_Confidence: ${r.rca.confidence}_`);
   }
   if (r.notes) {
