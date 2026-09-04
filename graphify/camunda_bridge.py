@@ -73,9 +73,13 @@ logging.basicConfig(
 )
 log = logging.getLogger("camunda.bridge")
 
-# ── SRE system prompt (strict, no hallucination) ──────────────────────────────
+# ── SRE system prompt — BPMN Topology-Aware RCA ──────────────────────────────
 _SYSTEM_PROMPT = """\
-You are a senior SRE engineer performing Root Cause Analysis on a Camunda 8 BPMN incident.
+You are a senior SRE engineer and BPMN 2.0 specialist performing Root Cause Analysis on a Camunda 8 BPMN incident.
+
+You have access to:
+  1. The live incident error (type, message, element, variables)
+  2. The BPMN process flow TOPOLOGY (gateways, branches, boundary events, sequence flows)
 
 Rules:
 - Base EVERY claim on the supplied evidence only.
@@ -83,11 +87,25 @@ Rules:
 - If cause is unclear, say UNKNOWN.
 - Provide concrete, actionable fix steps.
 
+BPMN Topology Analysis Rules (CRITICAL — always check if topology is provided):
+  A. PARALLEL GATEWAY DEADLOCK: If the failing element is inside a Parallel Fork (+) branch,
+     check if a Parallel Join (+) gateway exists downstream. If YES, and the error path bypasses
+     the normal token flow into that join, the join will wait forever (Token Starvation).
+     You MUST warn about this deadlock and recommend Terminate End Event or sequential flow.
+  B. EXCLUSIVE GATEWAY (X): If failing at a gateway with conditions, check if a default flow
+     is configured. If not, CONDITION_ERROR means no condition evaluated to true.
+  C. ERROR BOUNDARY EVENTS: If error type is UNHANDLED_ERROR_EVENT, check the topology for
+     any Error Boundary Catch Events on the failing task. If none exist, that is the root cause.
+  D. MESSAGE/TIMER BOUNDARY: Check if hanging tasks have Boundary Events they depend on.
+  E. SUB-PROCESS SCOPE: If the failing element is inside a sub-process, errors thrown inside
+     may not propagate to the parent scope — check boundary events on the sub-process container.
+
 Return ONLY valid JSON (no markdown fences):
 {
   "summary": "one-line summary",
-  "root_cause": "precise root cause from evidence",
+  "root_cause": "precise root cause from evidence and topology",
   "confidence": "HIGH"|"MEDIUM"|"LOW",
+  "topology_warnings": ["e.g. PARALLEL_DEADLOCK: Parallel Join X waits for token from branch Y which is bypassed by error flow"],
   "observed_facts": ["fact from data"],
   "evidence": ["exact error message or log line cited from evidence"],
   "recommended_actions": ["concrete step 1", "step 2"]
@@ -143,7 +161,7 @@ class _OperateSession:
             return True
 
     def get(self, url: str, timeout: int = 8) -> Optional[dict]:
-        """Authenticated GET via session cookie."""
+        """Authenticated GET via session cookie returning parsed JSON."""
         if not self._logged_in:
             self.login()
         try:
@@ -161,6 +179,27 @@ class _OperateSession:
             return None
         except Exception as e:
             log.debug(f"GET {url} failed: {e}")
+            return None
+
+    def get_raw(self, url: str, timeout: int = 8) -> Optional[str]:
+        """Authenticated GET returning raw text (handles XML, plaintext, or JSON strings)."""
+        if not self._logged_in:
+            self.login()
+        try:
+            req = urllib.request.Request(url)
+            if self._csrf_token:
+                req.add_header("X-CSRF-TOKEN", self._csrf_token)
+            with self._opener.open(req, timeout=timeout) as r:
+                return r.read().decode("utf-8", errors="replace")
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403):
+                self._logged_in = False
+                if self.login():
+                    return self.get_raw(url, timeout)
+            log.debug(f"GET_RAW {url} → HTTP {e.code}")
+            return None
+        except Exception as e:
+            log.debug(f"GET_RAW {url} failed: {e}")
             return None
 
     def post(self, url: str, body: dict, timeout: int = 8) -> Optional[dict]:
@@ -246,13 +285,17 @@ def fetch_process_instance(instance_key: str) -> dict:
 
 
 def fetch_instance_variables(instance_key: str) -> dict:
-    """Fetch all variables of a process instance (for RCA context)."""
-    # Try v2 variables search
+    """Fetch all variables of a process instance (for RCA context). Includes retry for exporter lag."""
     body_v2 = {
         "filter": {"processInstanceKey": str(instance_key)},
         "page": {"limit": 100},
     }
     result = _session.post(f"{OPERATE_URL}/v2/variables/search", body_v2)
+    if not result or not result.get("items"):
+        # Brief retry to handle Operate Elasticsearch exporter indexing lag
+        time.sleep(0.5)
+        result = _session.post(f"{OPERATE_URL}/v2/variables/search", body_v2)
+
     if not result or "items" not in result:
         # Fallback to v1 variables search
         body_v1 = {
@@ -301,6 +344,260 @@ def fetch_flow_node_name(instance_key: str, flow_node_id: str) -> str:
     if result and result.get("items"):
         return result["items"][0].get("flowNodeName") or result["items"][0].get("flowNodeId") or flow_node_id
     return flow_node_id
+
+
+# ── BPMN XML Topology Parser ──────────────────────────────────────────────────
+
+def fetch_bpmn_xml(proc_def_key: str) -> Optional[str]:
+    """Fetch the raw BPMN 2.0 XML for a process definition from Camunda Operate."""
+    for endpoint in [
+        f"{OPERATE_URL}/v2/process-definitions/{proc_def_key}/xml",
+        f"{OPERATE_URL}/v1/process-definitions/{proc_def_key}/xml",
+        f"{OPERATE_URL}/api/process-definitions/{proc_def_key}/xml",
+    ]:
+        raw = _session.get_raw(endpoint)
+        if raw:
+            raw_s = raw.strip()
+            if raw_s.startswith("{"):
+                try:
+                    data = json.loads(raw_s)
+                    if isinstance(data, dict):
+                        xml = data.get("bpmnXml") or data.get("xml") or data.get("content")
+                        if xml:
+                            return xml
+                except Exception:
+                    pass
+            elif "<" in raw_s and ("process" in raw_s or "definitions" in raw_s):
+                return raw_s
+
+    return None
+
+
+def parse_bpmn_topology(xml_content: str, incident_element_id: str = "") -> dict:
+    """
+    Parse BPMN 2.0 XML and extract the process flow topology relevant for RCA.
+    Robustly handles all namespaces and prefixes.
+    Returns a structured dict describing:
+      - gateways (type, id, name, incoming/outgoing flows)
+      - boundary_events (type, attached to which task)
+      - parallel_branches (which tasks share a parallel fork)
+      - incident_element_context (what gateway/scope the failing element is in)
+      - warnings (critical deadlock / missing boundary warnings)
+    """
+    try:
+        import xml.etree.ElementTree as ET
+
+        def _local_tag(elem) -> str:
+            return elem.tag.split("}")[-1] if "}" in elem.tag else elem.tag
+
+        root = ET.fromstring(xml_content)
+
+        # Find the process element
+        process_el = None
+        for el in root.iter():
+            if _local_tag(el) == "process":
+                process_el = el
+                break
+        if process_el is None:
+            process_el = root
+
+        topology = {
+            "gateways": [],
+            "boundary_events": [],
+            "sequence_flows": [],
+            "tasks": [],
+            "incident_element_context": {},
+            "parallel_fork_branches": [],
+            "warnings": [],
+        }
+
+        # Collect all sequence flows: {flow_id: {sourceRef, targetRef}}
+        flow_map: dict = {}
+        for el in process_el.iter():
+            if _local_tag(el) == "sequenceFlow":
+                fid = el.get("id", "")
+                has_cond = any(_local_tag(c) == "conditionExpression" for c in el)
+                flow_map[fid] = {
+                    "id": fid,
+                    "name": el.get("name", ""),
+                    "source": el.get("sourceRef", ""),
+                    "target": el.get("targetRef", ""),
+                    "condition": "yes" if has_cond else "no",
+                }
+                topology["sequence_flows"].append(flow_map[fid])
+
+        # Build adjacency: element_id -> list of target element_ids
+        outgoing_map: dict = {}
+        incoming_map: dict = {}
+        for sf in flow_map.values():
+            outgoing_map.setdefault(sf["source"], []).append(sf["target"])
+            incoming_map.setdefault(sf["target"], []).append(sf["source"])
+
+        # Collect gateways
+        gw_types = {
+            "parallelGateway": "PARALLEL",
+            "exclusiveGateway": "EXCLUSIVE",
+            "inclusiveGateway": "INCLUSIVE",
+            "eventBasedGateway": "EVENT_BASED",
+            "complexGateway": "COMPLEX",
+        }
+        for el in process_el.iter():
+            lt = _local_tag(el)
+            if lt in gw_types:
+                gw_id   = el.get("id", "")
+                gw_name = el.get("name", gw_id)
+                out_targets = outgoing_map.get(gw_id, [])
+                in_sources  = incoming_map.get(gw_id, [])
+                role = "FORK" if len(out_targets) > 1 else ("JOIN" if len(in_sources) > 1 else "PASS-THROUGH")
+
+                entry = {
+                    "id": gw_id,
+                    "name": gw_name,
+                    "type": gw_types[lt],
+                    "role": role,
+                    "outgoing_targets": out_targets,
+                    "incoming_sources": in_sources,
+                }
+                topology["gateways"].append(entry)
+
+                if gw_types[lt] == "PARALLEL" and role == "FORK":
+                    topology["parallel_fork_branches"].append({
+                        "fork_id": gw_id,
+                        "fork_name": gw_name,
+                        "branch_entry_elements": out_targets,
+                        "description": f"Parallel Fork '{gw_name}' splits into {len(out_targets)} concurrent branches: {out_targets}",
+                    })
+
+        # Collect boundary events (error, timer, message, signal)
+        boundary_event_types = {
+            "errorEventDefinition": "ERROR",
+            "timerEventDefinition": "TIMER",
+            "messageEventDefinition": "MESSAGE",
+            "signalEventDefinition": "SIGNAL",
+            "escalationEventDefinition": "ESCALATION",
+        }
+        for el in process_el.iter():
+            if _local_tag(el) == "boundaryEvent":
+                be_id     = el.get("id", "")
+                be_name   = el.get("name", be_id)
+                attached  = el.get("attachedToRef", "")
+                cancel    = el.get("cancelActivity", "true")
+                be_types  = []
+                for child in el:
+                    c_lt = _local_tag(child)
+                    if c_lt in boundary_event_types:
+                        err_ref = child.get("errorRef", "")
+                        label = boundary_event_types[c_lt]
+                        if err_ref:
+                            for err_el in root.iter():
+                                if _local_tag(err_el) == "error" and err_el.get("id") == err_ref:
+                                    err_code = err_el.get("errorCode", "")
+                                    if err_code:
+                                        label = f"{label}(code={err_code})"
+                                    break
+                        be_types.append(label)
+
+                topology["boundary_events"].append({
+                    "id": be_id,
+                    "name": be_name,
+                    "attached_to": attached,
+                    "type": ",".join(be_types) if be_types else "UNKNOWN",
+                    "interrupting": cancel != "false",
+                    "outgoing_targets": outgoing_map.get(be_id, []),
+                })
+
+        # Collect tasks/service tasks
+        task_tags = {
+            "serviceTask", "userTask", "sendTask", "receiveTask",
+            "manualTask", "scriptTask", "businessRuleTask", "callActivity", "task",
+        }
+        for el in process_el.iter():
+            lt = _local_tag(el)
+            if lt in task_tags:
+                t_id   = el.get("id", "")
+                t_name = el.get("name", t_id)
+                attached_bes = [
+                    be for be in topology["boundary_events"]
+                    if be["attached_to"] == t_id
+                ]
+                topology["tasks"].append({
+                    "id": t_id,
+                    "name": t_name,
+                    "type": lt,
+                    "boundary_events": [be["type"] for be in attached_bes],
+                    "incoming": incoming_map.get(t_id, []),
+                    "outgoing": outgoing_map.get(t_id, []),
+                })
+
+        # Analyze incident element context
+        if incident_element_id:
+            # Check if incident element is inside a parallel branch
+            for branch_info in topology["parallel_fork_branches"]:
+                branch_entries = branch_info["branch_entry_elements"]
+                # BFS from branch entry to find if incident_element_id is reachable
+                reachable = set()
+                queue = list(branch_entries)
+                while queue:
+                    curr = queue.pop(0)
+                    if curr in reachable:
+                        continue
+                    reachable.add(curr)
+                    queue.extend(outgoing_map.get(curr, []))
+
+                if incident_element_id in reachable:
+                    parallel_joins = [
+                        g for g in topology["gateways"]
+                        if g["type"] == "PARALLEL" and g["role"] == "JOIN"
+                    ]
+                    join_info = parallel_joins[0] if parallel_joins else {}
+                    elem_name = incident_element_id
+                    for t in topology["tasks"]:
+                        if t["id"] == incident_element_id:
+                            elem_name = t["name"] or incident_element_id
+                            break
+
+                    deadlock_msg = (
+                        f"CRITICAL: '{elem_name}' ({incident_element_id}) is inside Parallel Fork '{branch_info['fork_name']}'. "
+                        f"If its token is redirected by an error/boundary event, "
+                        f"the Parallel Join '{join_info.get('name', 'downstream')}' will WAIT FOREVER "
+                        f"(Token Starvation Deadlock). Recommend using a Terminate End Event or sequential flow."
+                    )
+                    topology["incident_element_context"] = {
+                        "inside_parallel_branch": True,
+                        "fork_gateway": branch_info["fork_id"],
+                        "fork_name": branch_info["fork_name"],
+                        "concurrent_branches": branch_entries,
+                        "parallel_join": join_info.get("id", "unknown"),
+                        "parallel_join_name": join_info.get("name", "unknown"),
+                        "deadlock_risk": deadlock_msg,
+                    }
+                    topology["warnings"].append(deadlock_msg)
+                    break
+
+            # Check if incident element has an error boundary event
+            task_matches = [t for t in topology["tasks"] if t["id"] == incident_element_id]
+            if task_matches:
+                task_info = task_matches[0]
+                has_error_boundary = any("ERROR" in be_type for be_type in task_info["boundary_events"])
+                topology["incident_element_context"]["has_error_boundary_event"] = has_error_boundary
+                if not has_error_boundary:
+                    missing_msg = (
+                        f"ERROR_BOUNDARY_MISSING: Task '{task_info['name']}' ({incident_element_id}) has NO Error Boundary Catch Event. "
+                        f"Any BPMN error thrown here will cause an UNHANDLED_ERROR_EVENT incident."
+                    )
+                    topology["incident_element_context"]["missing_boundary_warning"] = missing_msg
+                    topology["warnings"].append(missing_msg)
+
+        return topology
+
+    except Exception as e:
+        log.warning(f"BPMN topology parse failed: {e}")
+        return {"parse_error": str(e), "warnings": []}
+
+
+    except Exception as e:
+        log.warning(f"BPMN topology parse failed: {e}")
+        return {"parse_error": str(e), "warnings": []}
 
 
 # ── DGX vLLM RCA ─────────────────────────────────────────────────────────────
@@ -403,9 +700,73 @@ def run_rca_on_dgx(incident_payload: dict, sop_runbook: Optional[dict] = None) -
             + "\n\nApply these exact predefined instructions and steps tailored to the instance variables."
         )
 
+    # Build topology section separately for clear prompt injection
+    topology = incident_payload.get("bpmn_topology", {})
+    topology_section = ""
+    if topology and not topology.get("parse_error"):
+        # Summarise key topology facts concisely for the model
+        lines = []
+        lines.append("\n\n============================================================")
+        lines.append("🗺️  BPMN PROCESS TOPOLOGY (use for structural analysis)")
+        lines.append("============================================================")
+
+        # Incident element context (most important)
+        ctx = topology.get("incident_element_context", {})
+        if ctx:
+            lines.append("\n📍 Incident Element Context:")
+            if ctx.get("inside_parallel_branch"):
+                lines.append(f"  ⚠️  INSIDE PARALLEL BRANCH: Fork='{ctx.get('fork_name')}' Join='{ctx.get('parallel_join_name')}'")
+                lines.append(f"  🔴 DEADLOCK RISK: {ctx.get('deadlock_risk', '')}")
+            if ctx.get("missing_boundary_warning"):
+                lines.append(f"  ⚠️  {ctx['missing_boundary_warning']}")
+            if ctx.get("has_error_boundary_event") is False:
+                lines.append("  ❌ No Error Boundary Event found on this task.")
+            elif ctx.get("has_error_boundary_event"):
+                lines.append("  ✅ Error Boundary Event IS configured on this task.")
+
+        # Gateways summary
+        gateways = topology.get("gateways", [])
+        if gateways:
+            lines.append("\n🔀 Gateways:")
+            for gw in gateways:
+                lines.append(
+                    f"  [{gw['type']} {gw['role']}] id={gw['id']} name='{gw['name']}' "
+                    f"in={len(gw['incoming_sources'])} out={len(gw['outgoing_targets'])}"
+                )
+
+        # Boundary events summary
+        boundary_events = topology.get("boundary_events", [])
+        if boundary_events:
+            lines.append("\n🔔 Boundary Events:")
+            for be in boundary_events:
+                lines.append(
+                    f"  [{be['type']}] id={be['id']} attached_to={be['attached_to']} "
+                    f"interrupting={be['interrupting']}"
+                )
+
+        # Parallel branch info
+        parallel_branches = topology.get("parallel_fork_branches", [])
+        if parallel_branches:
+            lines.append("\n⚡ Parallel Fork Branches:")
+            for pb in parallel_branches:
+                lines.append(f"  Fork '{pb['fork_name']}' → branches: {pb['branch_entry_elements']}")
+
+        # Top-level topology warnings
+        warnings = topology.get("warnings", [])
+        if warnings:
+            lines.append("\n🚨 Topology Warnings:")
+            for w in warnings:
+                lines.append(f"  ⚠️  {w}")
+
+        topology_section = "\n".join(lines)
+
+    # Strip bpmn_topology from the JSON payload to avoid sending raw XML parsed dict (already summarised above)
+    payload_for_prompt = {k: v for k, v in incident_payload.items() if k != "bpmn_topology"}
+
     user_content = (
         "Camunda 8 BPMN Incident — Perform Root Cause Analysis:\n\n"
-        + json.dumps(incident_payload, indent=2)
+        + json.dumps(payload_for_prompt, indent=2)
+        + topology_section
         + sop_instructions
     )
 
@@ -465,6 +826,32 @@ def run_rca_on_dgx(incident_payload: dict, sop_runbook: Optional[dict] = None) -
             err_msg = incident_payload.get("error_message")
             if err_msg:
                 parsed["evidence"] = [err_msg]
+
+        # ── Merge pre-computed topology warnings into DGX output ──────────────
+        # Our BFS parser already detected structural issues (Parallel Gateway
+        # Deadlock, missing Boundary Event, etc.) stored in bpmn_topology["warnings"].
+        # DGX may or may not echo them back in topology_warnings[].
+        # We ALWAYS merge our pre-computed warnings to guarantee they appear.
+        bpmn_topology  = incident_payload.get("bpmn_topology", {})
+        pre_computed   = bpmn_topology.get("warnings", [])
+        dgx_warnings   = parsed.get("topology_warnings") or []
+
+        if pre_computed:
+            # Pre-computed warnings always come first (BFS-guaranteed structural facts)
+            merged = list(pre_computed)
+            seen = {w.lower()[:60] for w in merged}
+            for w in dgx_warnings:
+                if w.lower()[:60] not in seen:
+                    merged.append(w)
+                    seen.add(w.lower()[:60])
+            parsed["topology_warnings"] = merged
+            log.info(
+                f"  \U0001f5fa\ufe0f  topology_warnings merged: {len(pre_computed)} pre-computed "
+                f"+ {len(dgx_warnings)} DGX \u2192 {len(merged)} total"
+            )
+        elif dgx_warnings:
+            parsed["topology_warnings"] = dgx_warnings
+
         return parsed
 
     except Exception as exc:
@@ -531,7 +918,7 @@ def print_rca(incident: dict, rca: Optional[dict]) -> None:
 def build_incident_payload(raw: dict) -> dict:
     """
     Build a rich, dynamic incident payload from a raw Operate incident object.
-    Fetches bpmnProcessId, variables and flow node names from Operate REST API.
+    Fetches bpmnProcessId, variables, flow node names, and BPMN topology from Operate REST API.
     Zero hardcoding — every field comes from the live Camunda 8 API.
 
     Raw Operate incident fields:
@@ -568,16 +955,34 @@ def build_incident_payload(raw: dict) -> dict:
     # Fetch live process variables
     variables = fetch_instance_variables(instance_key) if instance_key else {}
 
+    # ── BPMN Topology Analysis ───────────────────────────────────────────────
+    bpmn_topology: dict = {}
+    if proc_def_key:
+        log.info(f"  🗺️  Fetching BPMN XML topology for process def {proc_def_key}...")
+        bpmn_xml = fetch_bpmn_xml(proc_def_key)
+        if bpmn_xml:
+            bpmn_topology = parse_bpmn_topology(bpmn_xml, element_id)
+            warnings = bpmn_topology.get("warnings", [])
+            if warnings:
+                for w in warnings:
+                    log.warning(f"  ⚠️  TOPOLOGY: {w}")
+            gw_count   = len(bpmn_topology.get("gateways", []))
+            task_count = len(bpmn_topology.get("tasks", []))
+            log.info(f"  🗺️  Topology parsed: {gw_count} gateways, {task_count} tasks")
+        else:
+            log.debug(f"  ⚠️  BPMN XML not available for proc_def_key={proc_def_key}")
+
     return {
-        "incident_key":  incident_key,
-        "process_id":    process_id,
-        "instance_key":  instance_key,
-        "element_id":    element_id,
-        "element_name":  element_name,
-        "error_type":    error_type,
-        "error_message": error_message,
-        "creation_time": creation_time,
-        "variables":     variables,
+        "incident_key":   incident_key,
+        "process_id":     process_id,
+        "instance_key":   instance_key,
+        "element_id":     element_id,
+        "element_name":   element_name,
+        "error_type":     error_type,
+        "error_message":  error_message,
+        "creation_time":  creation_time,
+        "variables":      variables,
+        "bpmn_topology":  bpmn_topology,
     }
 
 
@@ -684,9 +1089,9 @@ def run_bridge(poll_interval: int = POLL_INTERVAL, run_once: bool = False) -> No
                     )
                 else:
                     # 2. Different / New instance: Fetch predefined SOP Runbook for this error scenario
-                    sop = lookup_sop_guidelines(error_type) if _SUPABASE_AVAILABLE else None
+                    sop = lookup_sop_guidelines(error_type, process_id) if _SUPABASE_AVAILABLE else None
                     if sop:
-                        log.info(f"  📖 SOP RUNBOOK [{error_type}] loaded with predefined instructions")
+                        log.info(f"  📖 SOP RUNBOOK [{error_type}] (process: {process_id}) loaded with predefined instructions")
 
                     log.info(f"  🤖 NEW INSTANCE [{inst_key}]: Running DGX analysis on its specific variables with predefined SOP...")
                     rca = run_rca_on_dgx(payload, sop) if check_dgx_alive() else None

@@ -1,0 +1,14 @@
+{
+  "alert_name": "UNHANDLED_ERROR_EVENT \u00b7 orderProcess",
+  "service": "orderProcess",
+  "environment": "production",
+  "error": "UNHANDLED_ERROR_EVENT",
+  "error_message": "Expected to throw an error event with the code 'PROCESS_ERROR' with message 'PaymentGatewayTimeout: High error rate (45.2%) on payment-service. DatabaseConnectionPoolExhausted: Unable to acquire connection from pool after 30000ms timeout. Affected service: payment-service', but it was not caught. No error events are available in the scope.",
+  "logs": [
+    "Expected to throw an error event with the code 'PROCESS_ERROR' with message 'PaymentGatewayTimeout: High error rate (45.2%) on payment-service. DatabaseConnectionPoolExhausted: Unable to acquire connection from pool after 30000ms timeout. Affected service: payment-service', but it was not caught. No error events are available in the scope."
+  ],
+  "timeline": [],
+  "severity": "high",
+  "timestamp": null,
+  "request": "Investigate UNHANDLED_ERROR_EVENT in orderProcess (production)"
+}

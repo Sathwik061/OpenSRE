@@ -18,6 +18,7 @@ import {
   Search,
   Sparkles,
   Terminal,
+  TriangleAlert,
   Trash2,
   Wrench,
   Zap,
@@ -405,7 +406,28 @@ export function RcaDetail({
             </div>
           </Section>
 
-          {/* Observed Facts */}
+          {/* BPMN Topology Warnings (Parallel Deadlock, Missing Boundary, etc.) */}
+          {rca.topology_warnings && rca.topology_warnings.length > 0 ? (
+            <Section title="⚠️ BPMN Topology Warnings" icon={TriangleAlert} accent="text-orange-600">
+              <div className="space-y-2">
+                {rca.topology_warnings.map((w, i) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-3 rounded-md border border-orange-200 bg-orange-50 p-3 dark:border-orange-900/50 dark:bg-orange-950/30"
+                  >
+                    <TriangleAlert className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-400" />
+                    <p className="text-sm leading-relaxed text-orange-800 font-medium dark:text-orange-300">
+                      {w}
+                    </p>
+                  </div>
+                ))}
+                <p className="text-xs text-muted-foreground mt-1">
+                  These warnings are detected by static BPMN topology analysis and may require additional BPMN model changes beyond the incident fix.
+                </p>
+              </div>
+            </Section>
+          ) : null}
+
           <Section title="📋 Observed Facts" icon={ListChecks}>
             <ul className="space-y-2">
               {rca.observed_facts?.map((f, i) => (

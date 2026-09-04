@@ -269,6 +269,7 @@ def get_investigation(inv_id: str):
                         "observed_facts": sb_rca.get("observed_facts") or [],
                         "evidence": sb_rca.get("evidence") or [sb_rca.get("root_cause")],
                         "recommended_actions": sb_rca.get("recommended_actions") or [],
+                        "topology_warnings": sb_rca.get("topology_warnings") or [],
                     },
                     "source": "supabase_dgx",
                 }

@@ -44,6 +44,8 @@ export interface RcaReport {
   observed_facts: string[];
   evidence: string[];
   recommended_actions: string[];
+  /** BPMN topology structural warnings (parallel deadlock, missing boundary, etc.) */
+  topology_warnings?: string[];
 }
 
 export interface InvestigationResult {
