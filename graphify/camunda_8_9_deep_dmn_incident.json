@@ -1,0 +1,122 @@
+{
+  "alert_name": "DECISION_EVALUATION_ERROR in underwriting-policy-issuance",
+  "service": "underwriting-policy-issuance",
+  "environment": "production",
+  "severity": "critical",
+  "camunda_version": "8.9",
+  "error": "DECISION_EVALUATION_ERROR",
+  "error_type": "DECISION_EVALUATION_ERROR",
+  "error_message": "DecisionEvaluationFailedException: Failed to evaluate decision 'risk_scoring_matrix_v2' (decisionDefinitionKey: 2251799813894100, version: 3). FEEL evaluation error: Expected numeric type for expression 'applicant.financialProfile.debtToIncomeRatio < 0.45', but found string '\"43.5%\"' at clause index 2. Caused by: Upstream document ingestion service 'document-parser-service' serialized numeric percentage field as unparsed string with percent symbol. Downstream Exclusive Gateway 'Gateway_RouteRiskTier' has no matching sequence flow condition for uninitialized output variable 'riskTier' and lacks a configured Default Sequence Flow.",
+  "process_id": "underwriting-policy-issuance",
+  "process_definition_id": "underwriting-policy-issuance",
+  "instance_key": "2251799813899120",
+  "incident_key": "2251799813899188",
+  "element_id": "BusinessRuleTask_CalculateRiskScore",
+  "element_name": "Evaluate DMN Risk Tier & Premium",
+  "creation_time": "2026-09-07T10:42:15Z",
+  "timestamp": "2026-09-07T10:42:15Z",
+  "variables": {
+    "applicationId": "APP-2026-88914",
+    "applicantId": "CUST-551029",
+    "requestedCoverage": 500000,
+    "annualIncome": 125000,
+    "applicant": {
+      "name": "Sarah Jenkins",
+      "creditScore": 740,
+      "financialProfile": {
+        "monthlyDebt": 4531.25,
+        "debtToIncomeRatio": "43.5%",
+        "employmentStatus": "FULL_TIME",
+        "bankruptcyHistory": false
+      }
+    },
+    "schemaVersion": "v4.2-avro",
+    "documentParseTraceId": "doc-trace-77c8e1-992a-4501",
+    "kafkaTopic": "underwriting-intake-events",
+    "kafkaPartition": 3,
+    "kafkaOffset": 948201
+  },
+  "logs": [
+    "2026-09-07T10:40:11.023Z [underwriting-service] [main] INFO  c.t.underwriting.IntakeConsumer - Ingested insurance application [APP-2026-88914] from Kafka partition 3 (offset: 948201)",
+    "2026-09-07T10:40:15.890Z [document-parser-service] [ocr-worker-2] WARN  c.t.docparser.extractor.TableExtractor - OCR percentage regex fallback applied on page 4 field 'DTI': extracted raw string '43.5%' without floating-point cast",
+    "2026-09-07T10:40:16.104Z [schema-registry] [http-nio-8081-exec-12] WARN  io.confluent.kafka.schemaregistry - Schema compatibility warning: Subject 'underwriting-intake-events-value' evolved with string type on field 'debtToIncomeRatio'",
+    "2026-09-07T10:41:00.450Z [zeebe-engine] [StreamProcessor-2] INFO  io.camunda.zeebe.engine.processing - Activated BusinessRuleTask 'BusinessRuleTask_CalculateRiskScore' for processInstance 2251799813899120",
+    "2026-09-07T10:42:14.981Z [camunda-dmn-engine] [DmnEvaluationEngine] ERROR io.camunda.zeebe.dmn.impl.FeelEngine - [FEEL-EVAL-ERROR] Failed to evaluate unary tests in Decision 'risk_scoring_matrix_v2', InputClause #2: 'applicant.financialProfile.debtToIncomeRatio < 0.45'. Incompatible type: class java.lang.String cannot be compared to java.lang.Double using operator '<'. Value: \"43.5%\"",
+    "2026-09-07T10:42:15.012Z [Broker-0-Zeebe] [StreamProcessor-2] ERROR io.camunda.zeebe.engine.processing - [Incident Event] Incident created in process 'underwriting-policy-issuance' (key: 2251799813899120, element: BusinessRuleTask_CalculateRiskScore): DECISION_EVALUATION_ERROR - Decision 'risk_scoring_matrix_v2' evaluation failed due to FEEL type mismatch.",
+    "2026-09-07T10:42:15.045Z [underwriting-service] [zeebe-client-notifier] WARN  c.t.underwriting.listener.IncidentListener - Downstream Exclusive Gateway 'Gateway_RouteRiskTier' will be unreachable because required output variable 'riskTier' was not emitted by failed DMN task."
+  ],
+  "timeline": [
+    "10:40:11 — Ingested application APP-2026-88914 from Kafka topic 'underwriting-intake-events'",
+    "10:40:15 — Document parser OCR serialized 'debtToIncomeRatio' as string '43.5%' instead of float 0.435",
+    "10:40:16 — Schema registry compatibility warning on field debtToIncomeRatio",
+    "10:41:00 — Camunda 8.9 Zeebe engine started BusinessRuleTask 'Evaluate DMN Risk Tier & Premium'",
+    "10:42:14 — FEEL engine failed comparison: string '43.5%' cannot be evaluated with numeric operator '< 0.45'",
+    "10:42:15 — Camunda 8.9 created DECISION_EVALUATION_ERROR incident on BusinessRuleTask_CalculateRiskScore",
+    "10:42:15 — Downstream Exclusive Gateway 'Gateway_RouteRiskTier' stalled due to uninitialized variable 'riskTier'"
+  ],
+  "bpmn_topology": {
+    "camunda_version": "8.9",
+    "gateways": [
+      {
+        "id": "Gateway_RouteRiskTier",
+        "name": "Route by Risk Tier",
+        "type": "EXCLUSIVE",
+        "role": "FORK",
+        "default_flow": "",
+        "incoming_sources": ["BusinessRuleTask_CalculateRiskScore"],
+        "outgoing_targets": ["Activity_AutoApprovePolicy", "Activity_ManualUnderwritingReview", "Activity_DeclineApplication"]
+      }
+    ],
+    "boundary_events": [],
+    "tasks": [
+      {
+        "id": "Activity_IngestApplication",
+        "name": "Ingest Customer Application",
+        "type": "serviceTask",
+        "incoming": ["StartEvent_1"],
+        "outgoing": ["BusinessRuleTask_CalculateRiskScore"]
+      },
+      {
+        "id": "BusinessRuleTask_CalculateRiskScore",
+        "name": "Evaluate DMN Risk Tier & Premium",
+        "type": "businessRuleTask",
+        "incoming": ["Activity_IngestApplication"],
+        "outgoing": ["Gateway_RouteRiskTier"]
+      },
+      {
+        "id": "Activity_AutoApprovePolicy",
+        "name": "Issue Policy Automatically",
+        "type": "serviceTask",
+        "incoming": ["Gateway_RouteRiskTier"],
+        "outgoing": ["EndEvent_Approved"]
+      },
+      {
+        "id": "Activity_ManualUnderwritingReview",
+        "name": "Manual Underwriter Review",
+        "type": "userTask",
+        "incoming": ["Gateway_RouteRiskTier"],
+        "outgoing": ["EndEvent_Reviewed"]
+      },
+      {
+        "id": "Activity_DeclineApplication",
+        "name": "Send Rejection Notice",
+        "type": "sendTask",
+        "incoming": ["Gateway_RouteRiskTier"],
+        "outgoing": ["EndEvent_Declined"]
+      }
+    ],
+    "incident_element_context": {
+      "element_id": "BusinessRuleTask_CalculateRiskScore",
+      "element_name": "Evaluate DMN Risk Tier & Premium",
+      "element_type": "businessRuleTask",
+      "inside_parallel_branch": false,
+      "has_error_boundary_event": false,
+      "missing_boundary_warning": "MISSING_ERROR_BOUNDARY_EVENT: BusinessRuleTask 'BusinessRuleTask_CalculateRiskScore' has NO Error Boundary Catch Event attached to catch DMN evaluation exceptions. RECOMMENDATION: In Camunda Modeler, attach an Error Boundary Catch Event or Error Event Subprocess to catch 'DECISION_EVALUATION_ERROR' and route to Manual Underwriting Review."
+    },
+    "warnings": [
+      "EXCLUSIVE GATEWAY RISK: Exclusive Gateway 'Route by Risk Tier' (Gateway_RouteRiskTier) has 3 branches with no Default Sequence Flow configured. RECOMMENDATION: In Camunda Modeler, select Exclusive Gateway 'Route by Risk Tier' and designate one outgoing sequence flow (e.g. Manual Underwriting Review) as the 'Default flow' to prevent secondary CONDITION_ERROR incidents.",
+      "MISSING_ERROR_BOUNDARY_EVENT: BusinessRuleTask 'BusinessRuleTask_CalculateRiskScore' has NO Error Boundary Catch Event attached. RECOMMENDATION: In Camunda Modeler, attach an Error Boundary Catch Event to 'BusinessRuleTask_CalculateRiskScore' to handle DMN calculation failures gracefully."
+    ]
+  },
+  "request": "Perform a deep root cause analysis of the DECISION_EVALUATION_ERROR in Camunda 8.9. Identify the exact FEEL type conflict, explain how upstream Kafka Avro schema and OCR parser caused the malformed payload, analyze the BPMN XOR gateway risk, and provide concrete multi-level remediation steps."
+}

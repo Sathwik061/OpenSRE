@@ -1,0 +1,56 @@
+id: extract-value-error
+name: FEEL Variable Extraction & Undefined Scope Resolution SOP
+version: "1.0.0"
+category: FEEL_EXPRESSION_ERROR
+priority: MEDIUM
+
+scope:
+  engine: "Camunda 8.x"
+  services:
+    - "*"
+  error_types:
+    - "EXTRACT_VALUE_ERROR"
+    - "VARIABLE_NOT_FOUND"
+    - "UNDEFINED_VARIABLE"
+    - "PROPERTY_ACCESS_ERROR"
+  tags:
+    - "EXTRACT_VALUE_ERROR"
+    - "VARIABLE_NOT_FOUND"
+    - "FEEL expression"
+    - "null pointer"
+    - "is defined"
+    - "Operate variable state"
+
+trigger:
+  pattern: "failed to evaluate expression.*failed to extract value|variable.*not found"
+  log_keywords:
+    - "EXTRACT_VALUE_ERROR"
+    - "VARIABLE_NOT_FOUND"
+    - "failed to extract value"
+    - "cannot extract property"
+
+diagnosis:
+  summary: "Standard operating procedure for resolving FEEL expression variable extraction errors caused by accessing undefined or null variables."
+  root_cause_template: "Element '{task_name}' ({element_id}) attempted to evaluate a FEEL expression accessing an uninitialized or null property."
+  topology_checks:
+    - check: "element_feel_expression"
+      description: "Review element ID and exact FEEL expression reported in Zeebe incident."
+    - check: "variable_scope_presence"
+      description: "Verify in Operate whether the parent variable was initialized before reaching this task."
+
+remediation:
+  automated_actions:
+    - step: 1
+      action: "ADD_DEFENSIVE_FEEL_CHECK"
+      description: "Use null-coalescing or 'is defined()' expressions in BPMN FEEL expressions (e.g., if is defined(user) and user != null and user.profile != null then user.profile.email else 'default')."
+    - step: 2
+      action: "ENSURE_UPSTREAM_OUTPUT_MAPPING"
+      description: "Ensure predecessor tasks output the required variable object into process instance scope."
+    - step: 3
+      action: "REDEPLOY_AND_RETRY"
+      description: "Deploy updated BPMN model and retry the incident in Camunda Operate."
+
+verification:
+  checks:
+    - "FEEL expression handles null/missing variables gracefully without throwing errors."
+    - "Incident resolved in Camunda Operate."

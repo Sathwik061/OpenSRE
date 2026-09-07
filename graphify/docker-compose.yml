@@ -1,10 +1,12 @@
 # ==============================================================================
-# Camunda 8.9 Self-Managed Orchestration Stack
-# Consolidated Zeebe Engine + Operate + Tasklist (v8.9.17)
+# Camunda Self-Managed Orchestration Stack
+# Consolidated Zeebe Engine + Operate + Tasklist (v8.7, v8.8, v8.9, v8.10+)
+# To change version: set CAMUNDA_VERSION in .env (e.g. CAMUNDA_VERSION=8.8.0)
+# For Camunda 8.6 or older: use docker-compose-8.6-backup.yml
 # ==============================================================================
 services:
   camunda-data-init:
-    image: camunda/camunda:8.9.17
+    image: camunda/camunda:${CAMUNDA_VERSION:-8.9.17}
     user: "0:0"
     entrypoint: ["/bin/sh", "-c", "chown -R 1001:1001 /usr/local/camunda/camunda-data && chmod 775 /usr/local/camunda/camunda-data"]
     volumes:
@@ -12,11 +14,11 @@ services:
     restart: "no"
 
   orchestration:
-    image: camunda/camunda:8.9.17
-    container_name: graphify-camunda89
+    image: camunda/camunda:${CAMUNDA_VERSION:-8.9.17}
+    container_name: graphify-camunda
     ports:
       - "26500:26500"   # Zeebe gRPC Gateway
-      - "8080:8080"     # Camunda 8.9 Unified Web (Operate / Tasklist / Zeebe REST)
+      - "8080:8080"     # Camunda Unified Web (Operate / Tasklist / Zeebe REST)
       - "9600:9600"     # Actuator / Metrics
     environment:
       - CAMUNDA_OPERATE_CSRF_PREVENTION_ENABLED=false

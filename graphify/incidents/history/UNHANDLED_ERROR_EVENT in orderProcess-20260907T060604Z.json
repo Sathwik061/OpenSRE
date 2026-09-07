@@ -1,0 +1,24 @@
+{
+  "alert_name": "UNHANDLED_ERROR_EVENT in orderProcess",
+  "service": "orderProcess",
+  "environment": "production",
+  "error": "UNHANDLED_ERROR_EVENT",
+  "error_message": "PaymentGatewayTimeout: High error rate (45.2%) on payment-service. DatabaseConnectionPoolExhausted: Unable to acquire connection from pool after 30000ms timeout",
+  "logs": [
+    "2026-09-04 [WARN] HikariPool-1 - Connection is not available, request timed out after 30000ms. Active: 50, Idle: 0, Total: 50",
+    "2026-09-04 [ERROR] PaymentGatewayTimeout: High error rate (45.2%) on payment-service",
+    "2026-09-04 [FATAL] UNHANDLED_ERROR_EVENT in orderProcess Activity_0luysxt"
+  ],
+  "timeline": [],
+  "severity": "high",
+  "timestamp": null,
+  "variables": null,
+  "bpmn_topology": null,
+  "element_id": null,
+  "element_name": null,
+  "process_id": null,
+  "instance_key": null,
+  "incident_key": null,
+  "camunda_version": "8.9",
+  "request": "Determine what failed, identify the most likely root cause using the supplied evidence, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}

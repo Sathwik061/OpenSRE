@@ -17,6 +17,7 @@ import { useApp } from "@/lib/app-context";
 import { pollInvestigation, sentinel } from "@/lib/api";
 import { INCIDENT_CASES, newId } from "@/lib/incident-cases";
 import { getTemplates, saveHistoryRecord, saveTemplate } from "@/lib/storage";
+import { maskStringValue, maskVariables } from "@/lib/masking";
 import type { Environment, HistoryRecord, IncidentCase, Severity } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -52,10 +53,14 @@ function IngestPage() {
   const [service, setService] = useState("");
   const [environment, setEnvironment] = useState<Environment>("production");
   const [severity, setSeverity] = useState<Severity>("high");
+  const [camundaVersion, setCamundaVersion] = useState("8.9");
   const [errorType, setErrorType] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [logs, setLogs] = useState("");
   const [timeline, setTimeline] = useState<TimelineItem[]>([{ time: "", event: "" }]);
+  const [variables, setVariables] = useState<Record<string, any>>({});
+  const [elementId, setElementId] = useState("");
+  const [instanceKey, setInstanceKey] = useState("");
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -67,6 +72,9 @@ function IngestPage() {
       setErrorType("");
       setErrorMessage("");
       setLogs("");
+      setVariables({});
+      setElementId("");
+      setInstanceKey("");
       setTimeline([{ time: "", event: "" }]);
       toast.info("Custom blank form ready — enter any service or error");
       return;
@@ -80,6 +88,9 @@ function IngestPage() {
     setErrorType(c.errorType);
     setErrorMessage(c.errorMessage);
     setLogs(c.logs.join("\n"));
+    setVariables(c.variables || {});
+    setElementId(c.elementId || "");
+    setInstanceKey(c.processInstanceKey || "");
     setTimeline(
       c.timeline.map((t) => {
         const [time, ...rest] = t.split(" — ");
@@ -91,21 +102,182 @@ function IngestPage() {
 
   async function handleFile(file: File) {
     try {
-      const parsed = JSON.parse(await file.text()) as Record<string, unknown>;
-      setService(String(parsed["service"] ?? parsed["alert_name"] ?? ""));
-      setErrorType(String(parsed["error"] ?? parsed["error_type"] ?? ""));
-      setErrorMessage(String(parsed["error_message"] ?? ""));
-      if (Array.isArray(parsed["logs"])) setLogs((parsed["logs"] as string[]).join("\n"));
-      if (Array.isArray(parsed["timeline"]))
-        setTimeline(
-          (parsed["timeline"] as string[]).map((t) => {
-            const [time, ...rest] = String(t).split(" — ");
-            return { time: time ?? "", event: rest.join(" — ") };
-          }),
-        );
-      toast.success("Alert file loaded", { description: file.name });
+      const rawText = await file.text();
+      // 1. Try parsing as JSON first
+      try {
+        const parsed = JSON.parse(rawText) as Record<string, unknown>;
+        if (typeof parsed === "object" && parsed !== null) {
+          if (parsed["service"] || parsed["alert_name"]) {
+            setService(String(parsed["service"] ?? parsed["alert_name"] ?? ""));
+          }
+          if (parsed["error"] || parsed["error_type"]) {
+            setErrorType(String(parsed["error"] ?? parsed["error_type"] ?? ""));
+          }
+          if (parsed["error_message"] || parsed["message"]) {
+            setErrorMessage(String(parsed["error_message"] ?? parsed["message"] ?? ""));
+          }
+          if (parsed["camunda_version"] || parsed["version"]) {
+            setCamundaVersion(String(parsed["camunda_version"] ?? parsed["version"]));
+          }
+          if (parsed["element_id"]) {
+            setElementId(String(parsed["element_id"]));
+          }
+          if (parsed["instance_key"]) {
+            setInstanceKey(String(parsed["instance_key"]));
+          }
+          if (parsed["variables"] && typeof parsed["variables"] === "object") {
+            setVariables(parsed["variables"] as Record<string, any>);
+          }
+          if (Array.isArray(parsed["logs"])) {
+            setLogs((parsed["logs"] as string[]).join("\n"));
+          } else if (typeof parsed["logs"] === "string") {
+            setLogs(parsed["logs"]);
+          }
+          if (Array.isArray(parsed["timeline"])) {
+            setTimeline(
+              (parsed["timeline"] as string[]).map((t) => {
+                const [time, ...rest] = String(t).split(" — ");
+                return { time: time ?? "", event: rest.join(" — ") };
+              }),
+            );
+          }
+          toast.success("Incident alert file loaded", { description: file.name });
+          return;
+        }
+      } catch {
+        // Not JSON, treat as raw log file (.log / .txt)
+      }
+
+      // 2. Parse as Plain Text Log file (.log)
+      setLogs(rawText);
+      const lines = rawText.split("\n").map((l) => l.trim()).filter(Boolean);
+
+      // Extract filename base as fallback service
+      const cleanFileName = file.name.replace(/\.(log|txt|json)$/i, "").replace(/[-_]/g, " ");
+
+      // Detect version in logs or filename (e.g. Camunda 8.6, 8.9)
+      const verMatch = rawText.match(/Camunda\s*([89]\.[0-9]+)/i) || file.name.match(/8[._-]([0-9]+)/);
+      if (verMatch) {
+        if (verMatch[1].includes(".")) {
+          setCamundaVersion(verMatch[1]);
+        } else {
+          setCamundaVersion(`8.${verMatch[1]}`);
+        }
+      }
+
+      // Regex patterns to detect service name
+      let detectedService = "";
+      const serviceMatch =
+        rawText.match(/\[([a-zA-Z0-9_\-]+(?:-service|-worker|-process|Process|Service))\]/i) ||
+        rawText.match(/service[=:]\s*["']?([a-zA-Z0-9_\-]+)["']?/i) ||
+        rawText.match(/processDefinition[=:]\s*["']?([a-zA-Z0-9_\-]+)["']?/i);
+      if (serviceMatch && serviceMatch[1]) {
+        detectedService = serviceMatch[1];
+      } else {
+        detectedService = cleanFileName || "orderProcess";
+      }
+      setService(detectedService);
+
+      // Regex patterns to detect error type
+      let detectedErrorType = "";
+      const knownErrors = [
+        "UNHANDLED_ERROR_EVENT",
+        "DECISION_EVALUATION_ERROR",
+        "CONDITION_ERROR",
+        "JOB_NO_RETRIES",
+        "FORM_NOT_FOUND",
+        "CALLED_ELEMENT_ERROR",
+        "MESSAGE_CORRELATION_ERROR",
+        "PaymentGatewayTimeout",
+        "DatabaseConnectionPoolExhausted",
+        "ConnectionTimeoutException",
+        "NullPointerException",
+        "DeadlockException",
+        "FEEL_EVALUATION_ERROR",
+      ];
+      for (const err of knownErrors) {
+        if (rawText.includes(err)) {
+          detectedErrorType = err;
+          break;
+        }
+      }
+      if (!detectedErrorType) {
+        const errMatch = rawText.match(/([A-Z][a-zA-Z0-9]*(?:Exception|Error|Timeout|Exhausted|Failure))/);
+        if (errMatch && errMatch[1]) {
+          detectedErrorType = errMatch[1];
+        } else {
+          detectedErrorType = "APPLICATION_ERROR";
+        }
+      }
+      setErrorType(detectedErrorType);
+
+      // Extract primary error message (prioritizing FATAL/incident description over WARN lines)
+      let detectedMessage = "";
+      const fatalOrIncidentLine = lines.find((l) => /FATAL|CRITICAL/i.test(l) || l.includes(detectedErrorType) || /Expected to throw/i.test(l));
+      const explicitErrorLine = lines.find((l) => /\[ERROR\]/i.test(l) && !/\[WARN\]/i.test(l));
+      const genericErrorLine = lines.find((l) => /ERROR|Exception|Timeout|Failed|failed/i.test(l) && !/\[WARN\]/i.test(l));
+
+      const chosenLine = fatalOrIncidentLine || explicitErrorLine || genericErrorLine || lines.find((l) => /ERROR|FATAL|Exception|Timeout/i.test(l));
+      if (chosenLine) {
+        const chosenIndex = lines.indexOf(chosenLine);
+        // Check if the next line provides the detailed incident reason (e.g. 'Expected to throw an error event...')
+        const nextLine = chosenIndex >= 0 && chosenIndex + 1 < lines.length ? lines[chosenIndex + 1] : "";
+        if (nextLine && (/Expected to throw/i.test(nextLine) || /No error boundary/i.test(nextLine) || /caused by/i.test(nextLine))) {
+          detectedMessage = nextLine.trim();
+        } else {
+          detectedMessage = chosenLine
+            .replace(/^\[?[0-9T:.\-Z ]+\]?\s*(?:\[[A-Z]+\]\s*)?(?:\[[a-zA-Z0-9_\-]+\]\s*)?/i, "")
+            .trim();
+        }
+      } else if (lines.length > 0) {
+        detectedMessage = lines[0] ?? "";
+      }
+      setErrorMessage(detectedMessage || `Incident detected in ${detectedService}`);
+
+      // Extract elementId if present in logs
+      const elementMatch =
+        rawText.match(/elementId[:=\s'"]+([a-zA-Z0-9_\-]+)/i) ||
+        rawText.match(/scope of element ['"]([a-zA-Z0-9_\-]+)['"]/i) ||
+        rawText.match(/flowNodeId[:=\s'"]+([a-zA-Z0-9_\-]+)/i);
+      if (elementMatch && elementMatch[1]) {
+        setElementId(elementMatch[1]);
+      }
+
+      // Extract instanceKey if present in logs
+      const instanceMatch =
+        rawText.match(/instance(?:Key|_key)?[:=\s'"]+(\d{10,25})/i) ||
+        rawText.match(/processInstanceKey[:=\s'"]+(\d{10,25})/i);
+      if (instanceMatch && instanceMatch[1]) {
+        setInstanceKey(instanceMatch[1]);
+      }
+
+      // Extract timeline events from timestamps
+      const timelineEntries: TimelineItem[] = [];
+      const timestampRegex = /(\b\d{2}:\d{2}:\d{2}(?:\.\d{3})?|\b\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2})/;
+      for (const line of lines) {
+        const match = line.match(timestampRegex);
+        if (match && match[1] && timelineEntries.length < 5) {
+          const time =
+            match[1].includes("T") || match[1].includes("-")
+              ? match[1].split(/[T ]/)[1]?.substring(0, 8) ?? match[1]
+              : match[1];
+          const eventText = line
+            .replace(match[0], "")
+            .replace(/^\[?[A-Z]+\]?\s*/, "")
+            .replace(/^\[?[a-zA-Z0-9_\-]+\]?\s*/, "")
+            .trim();
+          if (eventText) {
+            timelineEntries.push({ time, event: eventText.substring(0, 120) });
+          }
+        }
+      }
+      if (timelineEntries.length > 0) {
+        setTimeline(timelineEntries);
+      }
+
+      toast.success("Log file loaded and parsed", { description: file.name });
     } catch {
-      toast.error("Could not parse JSON file");
+      toast.error("Could not process uploaded file");
     }
   }
 
@@ -114,16 +286,25 @@ function IngestPage() {
       toast.error("Service name and error type are required");
       return;
     }
+    const maskedErrorMessage = maskStringValue(errorMessage);
+    const maskedLogs = logs.split("\n").filter(Boolean).map((l) => maskStringValue(l));
+    const maskedTimeline = timeline.filter((t) => t.event).map((t) => `${t.time} — ${maskStringValue(t.event)}`);
+    const maskedVariables = maskVariables(variables);
+
     const payload = {
       alert_name: `${errorType} in ${service}`,
       service,
       environment,
       error: errorType,
-      error_message: errorMessage,
-      logs: logs.split("\n").filter(Boolean),
-      timeline: timeline.filter((t) => t.event).map((t) => `${t.time} — ${t.event}`),
+      error_message: maskedErrorMessage,
+      logs: maskedLogs,
+      timeline: maskedTimeline,
       severity,
-      request: `Investigate ${errorType} in ${service} (${environment})`,
+      camunda_version: camundaVersion,
+      element_id: elementId,
+      instance_key: instanceKey,
+      variables: maskedVariables,
+      request: `Investigate ${errorType} in ${service} (${environment}) on Camunda ${camundaVersion}`,
     };
 
     const record: HistoryRecord = {
@@ -135,10 +316,14 @@ function IngestPage() {
       environment,
       severity,
       errorType,
-      errorMessage,
+      errorMessage: maskedErrorMessage,
+      elementId,
+      processInstanceKey: instanceKey,
+      variables: maskedVariables,
       resolutionStatus: "investigating",
       creationTime: new Date().toISOString(),
       payload,
+      camunda_version: camundaVersion,
     };
 
     setRunning(true);
@@ -149,9 +334,22 @@ function IngestPage() {
       const result = await pollInvestigation(config.sentinelUrl, accepted.investigation_id, (n) =>
         setProgress(`Polling for RCA… attempt ${n}`),
       );
+      const rcaVersion = result.camunda_version || result.rca?.camunda_version || camundaVersion;
+      const enhancedRca = result.rca
+        ? {
+            ...result.rca,
+            camunda_version: rcaVersion,
+            documentation_references: (result.rca.documentation_references || []).map((d) => ({
+              ...d,
+              camunda_version: d.camunda_version || rcaVersion,
+            })),
+          }
+        : undefined;
+
       const finished: HistoryRecord = {
         ...record,
-        rca: result.rca,
+        camunda_version: rcaVersion,
+        rca: enhancedRca,
         rawOutput: result.raw_output ?? "",
         savedAt: new Date().toISOString(),
       };
@@ -210,7 +408,7 @@ function IngestPage() {
         </Select>
       </header>
 
-      <section className="animate-fade-up grid gap-4 rounded-lg border bg-card p-5 md:grid-cols-2">
+      <section className="animate-fade-up grid gap-4 rounded-lg border bg-card p-5 md:grid-cols-3">
         <div className="space-y-1.5">
           <Label htmlFor="service">Service name</Label>
           <Input
@@ -230,6 +428,23 @@ function IngestPage() {
               <SelectItem value="production">production</SelectItem>
               <SelectItem value="staging">staging</SelectItem>
               <SelectItem value="dev">dev</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Camunda version</Label>
+          <Select value={camundaVersion} onValueChange={setCamundaVersion}>
+            <SelectTrigger>
+              <SelectValue placeholder="Camunda 8.9" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="8.9">Camunda 8.9 (Current)</SelectItem>
+              <SelectItem value="8.8">Camunda 8.8</SelectItem>
+              <SelectItem value="8.7">Camunda 8.7</SelectItem>
+              <SelectItem value="8.6">Camunda 8.6</SelectItem>
+              <SelectItem value="8.5">Camunda 8.5</SelectItem>
+              <SelectItem value="8.4">Camunda 8.4</SelectItem>
+              <SelectItem value="8.10">Camunda 8.10 (Upcoming)</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -257,7 +472,7 @@ function IngestPage() {
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-1.5 md:col-span-2">
+        <div className="space-y-1.5 md:col-span-3">
           <Label htmlFor="errorMessage">Error message</Label>
           <Input
             id="errorMessage"
@@ -340,12 +555,12 @@ function IngestPage() {
         onClick={() => fileRef.current?.click()}
       >
         <Upload className="mb-2 size-5 text-muted-foreground" />
-        <p className="text-sm font-medium">Drop a .json incident alert file</p>
-        <p className="text-xs text-muted-foreground">or click to browse</p>
+        <p className="text-sm font-medium">Drop a .log incident alert file</p>
+        <p className="text-xs text-muted-foreground">or click to browse (.log, .txt, .json)</p>
         <input
           ref={fileRef}
           type="file"
-          accept="application/json,.json"
+          accept=".log,.txt,.json,text/plain,application/json"
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];

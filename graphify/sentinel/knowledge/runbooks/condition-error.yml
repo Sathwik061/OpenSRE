@@ -1,0 +1,61 @@
+id: condition-error
+name: BPMN Gateway Condition Evaluation Failure SOP
+version: "1.0.0"
+category: BPMN_ROUTING_ERROR
+priority: HIGH
+
+scope:
+  engine: "Camunda 8.x"
+  services:
+    - "RequestCarInsuranceProcess"
+    - "loan-approval-process"
+    - "orderProcess"
+    - "*"
+  error_types:
+    - "CONDITION_ERROR"
+    - "NO_MATCHING_CONDITION"
+    - "GATEWAY_EVALUATION_ERROR"
+  tags:
+    - "CONDITION_ERROR"
+    - "XOR gateway"
+    - "inclusive gateway"
+    - "FEEL"
+    - "default sequence flow"
+    - "routing failure"
+
+trigger:
+  pattern: "Expected at least one condition to evaluate to true, or the default flow to be present"
+  log_keywords:
+    - "CONDITION_ERROR"
+    - "no default flow"
+    - "failed to evaluate condition"
+
+diagnosis:
+  summary: "Playbook for resolving exclusive (XOR) or inclusive gateway condition expression failures and unhandled routing branches."
+  root_cause_template: "Gateway '{gateway_name}' failed to evaluate any outgoing sequence flow conditions to true given runtime variables. No default sequence flow was defined."
+
+remediation:
+  automated_actions:
+    - step: 1
+      action: "INSPECT_GATEWAY_EXPRESSIONS"
+      target_element: "{gateway_name}"
+      description: "Inspect outgoing sequence flow FEEL condition expressions on the failing gateway '{gateway_name}' in Camunda Modeler."
+    - step: 2
+      action: "VALIDATE_VARIABLE_STATE"
+      description: "Verify runtime variable values against condition expressions (check for missing or null variables)."
+    - step: 3
+      action: "DEFENSIVE_FEEL_SYNTAX"
+      syntax_example: "= if is defined(varName) and varName != null then (condition) else false"
+      description: "Add defensive null-checks in FEEL expressions: if is defined(varName) and varName != null then (condition) else false."
+    - step: 4
+      action: "CONFIGURE_DEFAULT_FLOW"
+      description: "Always configure a Default Sequence Flow on the XOR gateway to prevent unhandled routing stalls."
+    - step: 5
+      action: "REDEPLOY_AND_RESOLVE"
+      description: "Deploy the corrected BPMN model and resolve the incident in Camunda Operate."
+
+verification:
+  checks:
+    - "Every XOR Gateway has a designated Default Sequence Flow."
+    - "All FEEL conditions handle null or uninitialized variable cases gracefully."
+    - "Incident resolved and token progressed past the gateway."

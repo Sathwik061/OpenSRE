@@ -46,6 +46,7 @@ import {
   saveHistoryRecord,
   updateHistoryRecord,
 } from "@/lib/storage";
+import { maskVariables, maskStringValue } from "@/lib/masking";
 import type { HistoryRecord, IncidentCase } from "@/lib/types";
 
 function Section({
@@ -166,10 +167,26 @@ export function RcaDetail({
       const result = await pollInvestigation(config.sentinelUrl, accepted.investigation_id, (n) =>
         setProgress(`Analyzing incident… attempt ${n}`),
       );
+      const rcaVersion = result.camunda_version || result.rca?.camunda_version || record.camunda_version || record.payload?.camunda_version || payload.camunda_version;
+      const enhancedRca = result.rca
+        ? {
+            ...result.rca,
+            camunda_version: rcaVersion,
+            documentation_references: (result.rca.documentation_references || []).map((d) => ({
+              ...d,
+              camunda_version: d.camunda_version || rcaVersion,
+            })),
+          }
+        : undefined;
+
       const updated: HistoryRecord = {
         ...record,
-        payload,
-        rca: result.rca,
+        camunda_version: rcaVersion,
+        payload: {
+          ...payload,
+          camunda_version: rcaVersion,
+        },
+        rca: enhancedRca,
         rawOutput: result.raw_output ?? "",
         resolutionStatus: "investigating",
         savedAt: new Date().toISOString(),
@@ -207,7 +224,7 @@ export function RcaDetail({
     }
   }
 
-  async function saveToSupabaseRunbook() {
+  async function saveToRunbookStore() {
     if (!record.rca) {
       toast.error("No RCA analysis available to save as runbook");
       return;
@@ -215,16 +232,17 @@ export function RcaDetail({
     try {
       await sentinel.saveRunbook(config.sentinelUrl, {
         error_type: record.errorType,
-        process_id: record.processDefinitionId || "*",
+        service: record.service || record.processDefinitionId || "*",
+        title: `${record.errorType} SOP Playbook`,
         rca: record.rca,
         confidence: record.rca.confidence || "HIGH",
       });
-      toast.success("Successfully persisted to Supabase Runbook Store", {
+      toast.success("Successfully persisted to SRE Runbook Knowledge Store", {
         description: `Saved canonical SOP for ${record.errorType}`,
       });
     } catch (e) {
-      toast.error("Failed to save to Supabase", {
-        description: e instanceof Error ? e.message : "Supabase connection error",
+      toast.error("Failed to save runbook", {
+        description: e instanceof Error ? e.message : "Sentinel connection error",
       });
     }
   }
@@ -244,16 +262,16 @@ export function RcaDetail({
             <div className="flex flex-wrap items-center gap-2">
               <SeverityBadge severity={record.severity} />
               <TypeChip type={record.errorType} />
-              {(record.rca?.camunda_version || record.camunda_version) ? (
+              {(record.rca?.camunda_version || record.camunda_version || record.payload?.camunda_version) ? (
                 <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-blue-600 dark:text-blue-400">
-                  Camunda {record.rca?.camunda_version || record.camunda_version}
+                  Camunda {record.rca?.camunda_version || record.camunda_version || record.payload?.camunda_version}
                 </span>
               ) : null}
               <span className="text-xs text-muted-foreground font-mono">{record.environment}</span>
             </div>
             <h2 className="text-lg font-bold tracking-tight text-foreground">{record.title}</h2>
             <p className="text-xs text-muted-foreground font-mono max-w-3xl leading-relaxed">
-              {record.errorMessage || record.rca?.summary || "No explicit error message recorded."}
+              {maskStringValue(record.errorMessage || record.rca?.summary || "No explicit error message recorded.")}
             </p>
           </div>
 
@@ -274,8 +292,8 @@ export function RcaDetail({
               >
                 <CheckCircle2 className="size-4 text-emerald-600" /> Resolve in Camunda
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => void saveToSupabaseRunbook()}>
-                <Database className="size-4 text-emerald-600" /> Save as Supabase Runbook
+              <DropdownMenuItem onSelect={() => void saveToRunbookStore()}>
+                <BookOpen className="size-4 text-blue-600" /> Save as SRE Runbook
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={copyMarkdown}>
@@ -348,7 +366,7 @@ export function RcaDetail({
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(record.variables).map(([k, v], i) => (
+                {Object.entries(maskVariables(record.variables)).map(([k, v], i) => (
                   <tr key={k} className={i % 2 ? "bg-muted/20" : ""}>
                     <td className="w-1/3 border-r px-3 py-1.5 font-mono font-medium text-foreground">
                       {k}
@@ -373,13 +391,13 @@ export function RcaDetail({
         <>
           {/* WHAT is the error? */}
           <Section title="❓ WHAT is the error?" icon={AlertTriangle} accent="text-rose-600">
-            <p className="font-medium text-foreground leading-relaxed">{rca.summary}</p>
+            <p className="font-medium text-foreground leading-relaxed">{maskStringValue(rca.summary)}</p>
           </Section>
 
           {/* WHY did it occur? (Root Cause) */}
           <Section title="🔍 WHY did it occur? (Root Cause)" icon={Search} accent="text-amber-600">
             <div className="rounded-md bg-muted/30 border border-border/60 p-3.5 leading-relaxed text-foreground font-normal">
-              {rca.root_cause}
+              {maskStringValue(rca.root_cause)}
             </div>
           </Section>
 
@@ -394,7 +412,7 @@ export function RcaDetail({
                   >
                     <TriangleAlert className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-400" />
                     <p className="text-sm leading-relaxed text-orange-800 font-medium dark:text-orange-300">
-                      {w}
+                      {maskStringValue(w)}
                     </p>
                   </div>
                 ))}
@@ -413,9 +431,9 @@ export function RcaDetail({
                   <span className="leading-relaxed">
                     {/* Render variable lines with monospace styling */}
                     {f.startsWith("Variable ") ? (
-                      <code>{f}</code>
+                      <code>{maskStringValue(f)}</code>
                     ) : (
-                      f
+                      maskStringValue(f)
                     )}
                   </span>
                 </li>
@@ -440,7 +458,7 @@ export function RcaDetail({
                       key={i}
                       className="overflow-x-auto rounded-md border bg-muted/40 p-3 font-mono text-xs text-foreground whitespace-pre-wrap leading-relaxed"
                     >
-                      {e}
+                      {maskStringValue(e)}
                     </pre>
                   ))}
                 </div>
@@ -456,7 +474,7 @@ export function RcaDetail({
                   <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary font-mono text-[11px] font-bold text-primary-foreground">
                     {i + 1}
                   </span>
-                  <span className="leading-relaxed font-medium">{a}</span>
+                  <span className="leading-relaxed font-medium">{maskStringValue(a)}</span>
                 </li>
               ))}
             </ol>
@@ -465,43 +483,51 @@ export function RcaDetail({
           {/* Official Camunda Documentation References */}
           {rca.documentation_references && rca.documentation_references.length > 0 ? (
             <Section
-              title={`📚 Camunda ${rca.camunda_version || record.camunda_version || "8.9"} Documentation & Rules`}
+              title={`📚 Camunda ${rca.camunda_version || record.camunda_version || record.payload?.camunda_version || "8.9"} Documentation & Rules`}
               icon={BookOpen}
               accent="text-blue-600"
             >
               <div className="space-y-2.5">
-                {rca.documentation_references.map((doc, i) => (
-                  <div
-                    key={i}
-                    className="flex flex-col gap-1 rounded-md border border-blue-200/70 bg-blue-50/50 p-3 text-xs dark:border-blue-900/50 dark:bg-blue-950/20"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-blue-900 dark:text-blue-300">
-                          {doc.section || doc.title || "Camunda Documentation"}
-                        </span>
-                        <span className="rounded bg-blue-100 px-1.5 py-0.5 font-mono text-[9px] font-bold text-blue-800 dark:bg-blue-900/60 dark:text-blue-300">
-                          v{doc.camunda_version || rca.camunda_version || record.camunda_version || "8.9"}
-                        </span>
+                {rca.documentation_references.map((doc, i) => {
+                  const docVer =
+                    doc.camunda_version ||
+                    rca.camunda_version ||
+                    record.camunda_version ||
+                    record.payload?.camunda_version ||
+                    "8.9";
+                  return (
+                    <div
+                      key={i}
+                      className="flex flex-col gap-1 rounded-md border border-blue-200/70 bg-blue-50/50 p-3 text-xs dark:border-blue-900/50 dark:bg-blue-950/20"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-blue-900 dark:text-blue-300">
+                            {doc.section || doc.title || "Camunda Documentation"}
+                          </span>
+                          <span className="rounded bg-blue-100 px-1.5 py-0.5 font-mono text-[9px] font-bold text-blue-800 dark:bg-blue-900/60 dark:text-blue-300">
+                            v{docVer}
+                          </span>
+                        </div>
+                        {doc.url ? (
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 font-mono text-[11px] font-medium text-blue-600 hover:underline dark:text-blue-400"
+                          >
+                            View Official Doc <ExternalLink className="size-3" />
+                          </a>
+                        ) : null}
                       </div>
-                      {doc.url ? (
-                        <a
-                          href={doc.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 font-mono text-[11px] font-medium text-blue-600 hover:underline dark:text-blue-400"
-                        >
-                          View Official Doc <ExternalLink className="size-3" />
-                        </a>
+                      {doc.relevance ? (
+                        <p className="text-muted-foreground leading-relaxed">
+                          {doc.relevance}
+                        </p>
                       ) : null}
                     </div>
-                    {doc.relevance ? (
-                      <p className="text-muted-foreground leading-relaxed">
-                        {doc.relevance}
-                      </p>
-                    ) : null}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </Section>
           ) : null}

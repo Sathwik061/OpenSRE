@@ -264,7 +264,10 @@ def retrieve_camunda_context(
         citations_catalog.append({
             "title": entry["title"],
             "url": versioned_url,
+            "doc_url": versioned_url,
             "version": target_version,
+            "camunda_version": target_version,
+            "relevance": f"Official Camunda {target_version} rules for {entry['title']}",
         })
 
         prompt_lines.append(f"### 📖 {entry['title']} (Camunda {target_version})")

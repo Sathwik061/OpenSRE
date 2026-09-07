@@ -1,0 +1,57 @@
+id: io-mapping-error
+name: BPMN Task Input/Output Variable Mapping Failure SOP
+version: "1.0.0"
+category: BPMN_RUNTIME_ERROR
+priority: MEDIUM
+
+scope:
+  engine: "Camunda 8.x"
+  services:
+    - "*"
+  error_types:
+    - "IO_MAPPING_ERROR"
+    - "INPUT_MAPPING_ERROR"
+    - "OUTPUT_MAPPING_ERROR"
+    - "VARIABLE_MAPPING_FAILURE"
+  tags:
+    - "IO_MAPPING_ERROR"
+    - "INPUT_MAPPING_ERROR"
+    - "OUTPUT_MAPPING_ERROR"
+    - "variable mapping"
+    - "FEEL expression"
+    - "schema mismatch"
+
+trigger:
+  pattern: "failed to evaluate (input|output) mapping expression|IO_MAPPING_ERROR"
+  log_keywords:
+    - "IO_MAPPING_ERROR"
+    - "INPUT_MAPPING_ERROR"
+    - "OUTPUT_MAPPING_ERROR"
+    - "mapping expression"
+
+diagnosis:
+  summary: "Standard operating procedure for diagnosing and fixing Input and Output variable mapping failures on BPMN tasks."
+  root_cause_template: "Task '{task_name}' ({element_id}) failed during input/output variable mapping due to missing source variables or type incompatibilities."
+  topology_checks:
+    - check: "task_io_mappings"
+      description: "In Camunda Modeler, inspect Inputs and Outputs tabs on the failing task."
+    - check: "variable_schema_compatibility"
+      description: "Ensure source variable schema matches expected worker payload types."
+
+remediation:
+  automated_actions:
+    - step: 1
+      action: "ADD_SAFE_DEFAULTS"
+      description: "Ensure optional input variables have fallback default values in FEEL expressions (e.g., if is defined(payload) then payload else {})."
+    - step: 2
+      action: "ALIGN_JSON_SCHEMA"
+      description: "Verify that output variable assignments do not map incompatible types (e.g., assigning a JSON object to a string scalar without formatting)."
+    - step: 3
+      action: "REDEPLOY_AND_RETRY"
+      description: "Deploy the updated BPMN model to Zeebe and retry the incident in Camunda Operate."
+
+verification:
+  checks:
+    - "Input mapping evaluates successfully on worker job activation."
+    - "Output mapping successfully applies worker response to process instance scope."
+    - "Incident resolved in Camunda Operate."

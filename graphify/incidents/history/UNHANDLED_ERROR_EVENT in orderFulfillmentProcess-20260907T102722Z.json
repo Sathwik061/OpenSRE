@@ -1,0 +1,23 @@
+{
+  "alert_name": "UNHANDLED_ERROR_EVENT in orderFulfillmentProcess",
+  "service": "orderFulfillmentProcess",
+  "environment": "production",
+  "error": "UNHANDLED_ERROR_EVENT",
+  "error_message": "[FATAL] [orderFulfillmentProcess] UNHANDLED_ERROR_EVENT: Expected to throw an error event with the code 'PAYMENT_FAILED' with message 'PaymentGatewayException: Card authorization failed for card ****-****-1234-5678 with secret token ********', but it was not caught. No error events are available in the scope of element 'Activity_ProcessPayment'.",
+  "logs": [
+    "2026-09-07 10:14:04.882 [payment-gateway-worker-3] [WARN] [payment-gateway] Redis session cache timeout (auth: postgres://admin:********@redis-cluster:6379)",
+    "2026-09-07 10:14:06.340 [payment-gateway-worker-3] [ERROR] [payment-gateway] PaymentGatewayException: Upstream payment processor rejected auth token: Bearer ******** for customer SSN: ***-**-6789 with API Key ********"
+  ],
+  "timeline": [],
+  "severity": "high",
+  "timestamp": null,
+  "variables": null,
+  "bpmn_topology": null,
+  "element_id": null,
+  "element_name": null,
+  "process_id": null,
+  "instance_key": null,
+  "incident_key": null,
+  "camunda_version": "8.9",
+  "request": "Determine what failed, identify the most likely root cause using the supplied evidence, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}

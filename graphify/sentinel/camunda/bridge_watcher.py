@@ -16,6 +16,7 @@ from typing import Optional, Dict, Any, Set
 
 from sentinel.camunda.client import OperateClient, default_client
 from sentinel.camunda.topology_parser import parse_bpmn_topology
+from sentinel.core.masking import mask_variables
 
 logger = logging.getLogger("sentinel.camunda.watcher")
 
@@ -54,7 +55,8 @@ def build_incident_payload(raw: Dict[str, Any], client: Optional[OperateClient] 
             element_id   = fn_item.get("flowNodeId", "")
             element_name = fn_item.get("flowNodeName") or element_id
 
-    variables = c.fetch_instance_variables(instance_key) if instance_key else {}
+    raw_variables = c.fetch_instance_variables(instance_key) if instance_key else {}
+    variables = mask_variables(raw_variables)
 
     bpmn_topology: Dict[str, Any] = {}
     if proc_def_key:

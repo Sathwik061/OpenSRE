@@ -238,20 +238,31 @@ export async function pollInvestigation(
   base: string,
   id: string,
   onTick?: (attempt: number) => void,
-  maxAttempts = 60,
-  intervalMs = 2000,
+  maxAttempts = 30,
+  intervalMs = 1200,
 ): Promise<InvestigationResult> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     onTick?.(attempt);
     try {
       const res = await sentinel.getInvestigation(base, id);
-      if (res?.status && res.status !== "pending" && res.status !== "running" && res.rca) {
-        return res;
+      if (res) {
+        if (res.status === "running" || res.status === "pending") {
+          // Still in progress
+        } else if (res.rca) {
+          return res;
+        } else if (res.status === "error") {
+          if (res.rca) return res;
+          throw new Error(res.error || "Investigation failed on backend");
+        } else if (res.status === "done" || res.status === "success") {
+          return res;
+        }
       }
-    } catch {
-      /* keep polling */
+    } catch (err: any) {
+      if (err?.message && !err.message.includes("404") && !err.message.includes("running") && !err.message.includes("progress")) {
+        throw err;
+      }
     }
     await new Promise((r) => setTimeout(r, intervalMs));
   }
-  throw new Error("Investigation timed out");
+  throw new Error("Investigation timed out waiting for backend response");
 }

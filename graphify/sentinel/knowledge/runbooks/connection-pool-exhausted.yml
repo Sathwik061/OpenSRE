@@ -1,0 +1,71 @@
+id: connection-pool-exhausted
+name: Database Connection Pool Saturation & Lock Contention SOP
+version: "1.0.0"
+category: DATABASE_RESOURCE_EXHAUSTION
+priority: CRITICAL
+
+scope:
+  engine: "Camunda 8.x"
+  services:
+    - "orders-api"
+    - "payment-gateway"
+    - "inventory-service"
+    - "order-fulfillment-process"
+    - "*"
+  error_types:
+    - "CONNECTION_POOL_EXHAUSTED"
+    - "DatabaseConnectionPoolExhausted"
+    - "ConnectionTimeoutException"
+    - "HikariPoolTimeout"
+    - "SQLTimeoutException"
+  tags:
+    - "HikariCP"
+    - "HikariPool"
+    - "connection pool"
+    - "pg_stat_activity"
+    - "database lock"
+    - "PostgreSQL"
+    - "deadlock"
+    - "timeout"
+
+trigger:
+  pattern: "Connection is not available, request timed out after [0-9]+ms"
+  log_keywords:
+    - "HikariPool"
+    - "DatabaseConnectionPoolExhausted"
+    - "ConnectionTimeoutException"
+    - "Connection is not available"
+
+diagnosis:
+  summary: "Remediation procedures for HikariCP database connection pool exhaustion, connection leaks, and PostgreSQL row lock contention."
+  root_cause_template: "Database connection pool saturated in {service}. Applications timed out after {timeout_ms}ms waiting for an available connection due to long-running transactions and connection pool starvation."
+  queries:
+    - name: "active_lock_query"
+      sql: "SELECT pid, now() - xact_start AS duration, query, state, wait_event_type, wait_event FROM pg_stat_activity WHERE state != 'idle' ORDER BY duration DESC;"
+
+remediation:
+  automated_actions:
+    - step: 1
+      action: "TERMINATE_BLOCKING_QUERIES"
+      sql: "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE duration > interval '30 seconds' AND state != 'idle';"
+      description: "Run 'SELECT * FROM pg_stat_activity WHERE state != ''idle'' AND wait_event_type = ''Lock''' in PostgreSQL to identify and terminate blocking row lock transactions."
+    - step: 2
+      action: "SCALE_CONNECTION_POOL"
+      parameter: "spring.datasource.hikari.maximum-pool-size"
+      value: 100
+      description: "Scale maximum HikariCP pool size in service configuration (e.g. increase spring.datasource.hikari.maximum-pool-size from 50 to 100)."
+    - step: 3
+      action: "CONFIGURE_LEAK_DETECTION"
+      parameter: "spring.datasource.hikari.leak-detection-threshold"
+      value: "5000ms"
+      description: "Configure leakDetectionThreshold=5000ms and connectionTimeout=15000ms to detect unclosed connection leaks early."
+    - step: 4
+      action: "RESTART_WORKER_PODS"
+      target_service: "{service}"
+      description: "Restart affected worker service containers and resume suspended instances in Camunda Operate."
+
+verification:
+  checks:
+    - "Active pool connections dropped below 80% saturation threshold."
+    - "No blocked queries remaining in pg_stat_activity."
+    - "Zeebe worker job completion rate recovered to normal baseline."

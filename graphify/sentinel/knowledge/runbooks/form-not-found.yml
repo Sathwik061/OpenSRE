@@ -1,0 +1,57 @@
+id: form-not-found
+name: User Task Form Registry Binding & Missing Schema SOP
+version: "1.0.0"
+category: USER_TASK_FORM_ERROR
+priority: HIGH
+
+scope:
+  engine: "Camunda 8.x"
+  services:
+    - "customer-onboarding-process"
+    - "user-task-service"
+    - "tasklist"
+    - "*"
+  error_types:
+    - "FORM_NOT_FOUND"
+    - "FORM_BINDING_ERROR"
+    - "FORM_SCHEMA_INVALID"
+  tags:
+    - "FORM_NOT_FOUND"
+    - "user task"
+    - "formKey"
+    - "formId"
+    - "Camunda Form"
+    - "Tasklist"
+
+trigger:
+  pattern: "Expected to find a form with id .* but no form was found"
+  log_keywords:
+    - "FORM_NOT_FOUND"
+    - "missing form schema"
+    - "formId not found"
+
+diagnosis:
+  summary: "Remediation guide for user tasks failing to render due to missing form schemas or invalid form binding IDs in the Camunda Form Registry."
+  root_cause_template: "User task '{task_name}' referenced formId '{form_id}' which does not exist in the active Camunda Form registry."
+
+remediation:
+  automated_actions:
+    - step: 1
+      action: "VERIFY_FORM_LINK"
+      target_element: "{task_name}"
+      description: "In Camunda Modeler, inspect the user task '{task_name}' and verify the linked formId / formKey."
+    - step: 2
+      action: "DEPLOY_FORM_SCHEMA"
+      cli_command: "zbctl deploy {form_id}.form"
+      description: "Deploy the matching .form JSON schema file alongside the BPMN process to Zeebe."
+    - step: 3
+      action: "VALIDATE_SCHEMA_VERSION"
+      description: "Check the Camunda Tasklist and Zeebe form registry to confirm the schema version matches runtime compatibility."
+    - step: 4
+      action: "RETRY_USER_TASK"
+      description: "Once the form schema is deployed, retry the blocked user task instance in Camunda Operate."
+
+verification:
+  checks:
+    - "Form is visible and interactive in Camunda Tasklist."
+    - "User task completes cleanly and outputs variables to process scope."

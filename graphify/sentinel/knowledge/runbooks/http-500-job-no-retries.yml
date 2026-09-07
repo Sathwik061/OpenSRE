@@ -1,0 +1,69 @@
+id: http-500-job-no-retries
+name: Upstream HTTP 5xx Gateway Outage & Worker Retries Exhaustion SOP
+version: "1.0.0"
+category: INFRASTRUCTURE_ERROR
+priority: CRITICAL
+
+scope:
+  engine: "Camunda 8.x"
+  services:
+    - "payment-gateway"
+    - "billing-service"
+    - "external-connector"
+    - "*"
+  error_types:
+    - "HTTP_500"
+    - "HTTP_502"
+    - "HTTP_503"
+    - "HTTP_504"
+    - "JOB_NO_RETRIES"
+    - "NO_RETRIES"
+    - "GATEWAY_TIMEOUT"
+    - "SERVICE_UNAVAILABLE"
+  tags:
+    - "HTTP_500"
+    - "HTTP_503"
+    - "JOB_NO_RETRIES"
+    - "retries exhausted"
+    - "circuit breaker"
+    - "resilience4j"
+    - "operate retry"
+
+trigger:
+  pattern: "Job retries exhausted.*HTTP (500|502|503|504)|JOB_NO_RETRIES"
+  log_keywords:
+    - "JOB_NO_RETRIES"
+    - "HTTP 500"
+    - "HTTP 503"
+    - "HTTP 504"
+    - "Gateway Timeout"
+    - "Retries exhausted"
+
+diagnosis:
+  summary: "Standard operating procedure for handling worker job retry exhaustion caused by upstream HTTP 5xx errors or network gateway timeouts."
+  root_cause_template: "Zeebe Job Worker for task '{task_name}' ({element_id}) exhausted all available retries due to persistent upstream HTTP 5xx errors from {service}."
+  topology_checks:
+    - check: "worker_retries_zero"
+      description: "Verify if worker retries reached 0 resulting in an active Zeebe incident in Operate."
+    - check: "circuit_breaker_state"
+      description: "Check if upstream service circuit breaker is open or degraded."
+
+remediation:
+  automated_actions:
+    - step: 1
+      action: "IMPLEMENT_CIRCUIT_BREAKER"
+      description: "Configure Resilience4j or Envoy circuit breaker on worker client to fail-fast during external API outages."
+    - step: 2
+      action: "ATTACH_ERROR_BOUNDARY"
+      description: "Attach a BPMN Error Boundary Event to catch upstream business errors and route them to an automated compensation or fallback workflow."
+    - step: 3
+      action: "RESET_RETRIES_IN_OPERATE"
+      parameters:
+        retries: 3
+      description: "Once upstream service recovers, open the incident in Camunda Operate, reset Retries = 3, and trigger Retry."
+
+verification:
+  checks:
+    - "Upstream HTTP service endpoint returns 200 OK."
+    - "Incident retries updated to >= 1 in Camunda Operate."
+    - "Process instance moves beyond failing task without creating new incident."

@@ -1,0 +1,26 @@
+{
+  "alert_name": "UNHANDLED_ERROR_EVENT in orderFulfillmentProcess",
+  "service": "orderFulfillmentProcess",
+  "environment": "production",
+  "error": "UNHANDLED_ERROR_EVENT",
+  "error_message": "Expected to throw an error event with the code PAYMENT_FAILED, but it was not caught.",
+  "logs": [
+    "2026-09-07 10:14:07.891 [zeebe-cluster-node-1] [FATAL] [orderFulfillmentProcess] UNHANDLED_ERROR_EVENT",
+    "Expected to throw an error event with the code PAYMENT_FAILED, but it was not caught."
+  ],
+  "timeline": [
+    "10:14:01 \u2014 Starting process instance",
+    "10:14:07 \u2014 UNHANDLED_ERROR_EVENT"
+  ],
+  "severity": "high",
+  "timestamp": null,
+  "variables": null,
+  "bpmn_topology": null,
+  "element_id": null,
+  "element_name": null,
+  "process_id": null,
+  "instance_key": null,
+  "incident_key": null,
+  "camunda_version": "8.5",
+  "request": "Determine what failed, identify the most likely root cause using the supplied evidence, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}

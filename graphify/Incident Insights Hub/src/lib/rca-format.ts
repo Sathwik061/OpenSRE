@@ -30,7 +30,7 @@ export function recordToMarkdown(r: HistoryRecord): string {
     r.rca.recommended_actions?.forEach((a, i) => lines.push(`${i + 1}. ${a}`));
     lines.push("");
     if (r.rca.documentation_references && r.rca.documentation_references.length > 0) {
-      const ver = r.rca.camunda_version || r.camunda_version || "8.9";
+      const ver = r.rca.camunda_version || r.camunda_version || r.payload?.camunda_version || "8.9";
       lines.push(`## Camunda ${ver} Documentation References`);
       r.rca.documentation_references.forEach((doc) => {
         lines.push(`- **${doc.section || doc.title || "Camunda Doc"}:** ${doc.url ?? ""} — ${doc.relevance ?? ""}`);

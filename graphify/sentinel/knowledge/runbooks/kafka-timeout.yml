@@ -1,0 +1,67 @@
+id: kafka-timeout
+name: Kafka Producer Delivery Timeout & Broker Partition Loss SOP
+version: "1.0.0"
+category: EVENT_STREAMING_ERROR
+priority: CRITICAL
+
+scope:
+  engine: "Camunda 8.x"
+  services:
+    - "event-bridge"
+    - "order-fulfillment-process"
+    - "notification-service"
+    - "*"
+  error_types:
+    - "KAFKA_TIMEOUT"
+    - "MessageDeliveryException"
+    - "BrokerNotAvailableException"
+    - "RecordBatchTimeoutException"
+  tags:
+    - "Kafka"
+    - "KAFKA_TIMEOUT"
+    - "producer"
+    - "broker"
+    - "partition"
+    - "buffer saturation"
+    - "backpressure"
+
+trigger:
+  pattern: "Expiring [0-9]+ record\\(s\\) for topic-partition .* batch has expired"
+  log_keywords:
+    - "KAFKA_TIMEOUT"
+    - "Batch delivery timeout"
+    - "Broker connection failed"
+    - "RecordBatchTimeoutException"
+
+diagnosis:
+  summary: "Procedures for Kafka producer delivery timeouts, partition leader reconnects, and event buffer saturation recovery."
+  root_cause_template: "Kafka producer in {service} failed to deliver records within timeout window due to broker disconnect or partition leader re-election."
+
+remediation:
+  automated_actions:
+    - step: 1
+      action: "VERIFY_BROKER_HEALTH"
+      cli_command: "kafka-broker-api-versions.sh --bootstrap-server localhost:9092"
+      description: "Verify Kafka cluster health and broker availability using 'kafka-broker-api-versions.sh --bootstrap-server localhost:9092'."
+    - step: 2
+      action: "INSPECT_PARTITIONS"
+      cli_command: "kafka-topics.sh --describe --topic {topic_name}"
+      description: "Inspect topic partition leadership and ISR list: 'kafka-topics.sh --describe --topic {topic_name}'."
+    - step: 3
+      action: "VERIFY_REPLICATION_FACTOR"
+      description: "Ensure min.insync.replicas is satisfied and healthy brokers are online."
+    - step: 4
+      action: "TUNE_PRODUCER_SETTINGS"
+      parameters:
+        delivery_timeout_ms: 180000
+        max_block_ms: 30000
+      description: "Tune producer timeout resilience: delivery.timeout.ms=180000 and max.block.ms=30000."
+    - step: 5
+      action: "RESUME_AND_RETRY"
+      description: "Resume event bridge worker processing and retry the failed task in Camunda Operate."
+
+verification:
+  checks:
+    - "All Kafka partitions report healthy leader and in-sync replicas."
+    - "Producer dropped records count returned to zero."
+    - "Incident resolved in Camunda Operate."

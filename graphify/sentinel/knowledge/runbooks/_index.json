@@ -1,0 +1,350 @@
+[
+  {
+    "id": "unhandled-error-event",
+    "file": "unhandled-error-event.yml",
+    "title": "Unhandled BPMN Error Event & Parallel Deadlock SOP",
+    "error_types": [
+      "UNHANDLED_ERROR_EVENT",
+      "ERROR_EVENT",
+      "ERROR_CODE_UNHANDLED",
+      "PROCESS_ERROR",
+      "PAYMENT_FAILED"
+    ],
+    "services": [
+      "orderProcess",
+      "orderFulfillmentProcess",
+      "payment-gateway",
+      "billing-service",
+      "*"
+    ],
+    "tags": [
+      "UNHANDLED_ERROR_EVENT",
+      "error boundary",
+      "error catch",
+      "errorCode",
+      "parallel deadlock",
+      "token starvation",
+      "boundaryEvent",
+      "PAYMENT_FAILED",
+      "PROCESS_ERROR"
+    ],
+    "priority": "critical",
+    "summary": "Standard operating playbook for resolving unhandled BPMN error throw events, missing error boundaries, and downstream parallel join deadlocks.",
+    "root_cause_template": "Task '{task_name}' ({element_id}) threw a business error (code: '{error_code}') which was not caught in the active execution scope. {topology_hazard}",
+    "recommended_actions": [
+      "Add an Error Boundary Catch Event with errorCode '{error_code}' to the '{task_name}' task boundary in Camunda Modeler.",
+      "If the failing task is inside a Parallel Fork, route the error sequence flow to a Terminate End Event or attach an interrupting Error Boundary Event to the parent subprocess scope to prevent downstream token starvation deadlocks.",
+      "Investigate upstream service logs ({service}) to resolve the root infrastructure or business exception triggering the error throw.",
+      "Redeploy the updated BPMN XML to Zeebe and retry the incident in Camunda Operate."
+    ]
+  },
+  {
+    "id": "connection-pool-exhausted",
+    "file": "connection-pool-exhausted.yml",
+    "title": "Database Connection Pool Saturation & Lock Contention SOP",
+    "error_types": [
+      "CONNECTION_POOL_EXHAUSTED",
+      "DatabaseConnectionPoolExhausted",
+      "ConnectionTimeoutException",
+      "HikariPoolTimeout",
+      "SQLTimeoutException"
+    ],
+    "services": [
+      "orders-api",
+      "payment-gateway",
+      "inventory-service",
+      "order-fulfillment-process",
+      "*"
+    ],
+    "tags": [
+      "HikariCP",
+      "HikariPool",
+      "connection pool",
+      "pg_stat_activity",
+      "database lock",
+      "PostgreSQL",
+      "deadlock",
+      "timeout"
+    ],
+    "priority": "critical",
+    "summary": "Remediation procedures for HikariCP database connection pool exhaustion, connection leaks, and PostgreSQL row lock contention.",
+    "root_cause_template": "Database connection pool saturated in {service}. Applications timed out after {timeout_ms}ms waiting for an available connection due to long-running transactions and connection pool starvation.",
+    "recommended_actions": [
+      "Run 'SELECT * FROM pg_stat_activity WHERE state != ''idle'' AND wait_event_type = ''Lock''' in PostgreSQL to identify blocking row lock transactions.",
+      "Terminate long-running uncommitted transactions using 'SELECT pg_terminate_backend(pid)' for sessions older than 30s.",
+      "Scale maximum HikariCP pool size in service configuration (e.g. increase spring.datasource.hikari.maximum-pool-size from 50 to 100).",
+      "Enable leak detection in connection pool settings: spring.datasource.hikari.leak-detection-threshold=5000ms.",
+      "Restart the affected worker service containers and resume suspended instances in Camunda Operate."
+    ]
+  },
+  {
+    "id": "condition-error",
+    "file": "condition-error.yml",
+    "title": "BPMN Gateway Condition Evaluation Failure SOP",
+    "error_types": [
+      "CONDITION_ERROR",
+      "NO_MATCHING_CONDITION",
+      "GATEWAY_EVALUATION_ERROR"
+    ],
+    "services": [
+      "RequestCarInsuranceProcess",
+      "loan-approval-process",
+      "orderProcess",
+      "*"
+    ],
+    "tags": [
+      "CONDITION_ERROR",
+      "XOR gateway",
+      "inclusive gateway",
+      "FEEL",
+      "default sequence flow",
+      "routing failure"
+    ],
+    "priority": "high",
+    "summary": "Playbook for resolving exclusive (XOR) or inclusive gateway condition expression failures and unhandled routing branches.",
+    "root_cause_template": "Gateway '{gateway_name}' failed to evaluate any outgoing sequence flow conditions to true given runtime variables. No default sequence flow was defined.",
+    "recommended_actions": [
+      "Inspect outgoing sequence flow FEEL condition expressions on the failing gateway '{gateway_name}' in Camunda Modeler.",
+      "Verify runtime variable values against condition expressions (check for missing or null variables).",
+      "Add defensive null-checks in FEEL expressions: if is defined(varName) and varName != null then (condition) else false.",
+      "Always configure a Default Sequence Flow on the XOR gateway to prevent unhandled routing stalls.",
+      "Deploy the corrected BPMN model and resolve the incident in Camunda Operate."
+    ]
+  },
+  {
+    "id": "decision-evaluation-error",
+    "file": "decision-evaluation-error.yml",
+    "title": "DMN Decision Table Evaluation & FEEL Runtime Type Error SOP",
+    "error_types": [
+      "DECISION_EVALUATION_ERROR",
+      "FEEL_EVALUATION_ERROR",
+      "DMN_EVALUATION_ERROR"
+    ],
+    "services": [
+      "loan-approval-process",
+      "risk-scoring",
+      "credit-check",
+      "*"
+    ],
+    "tags": [
+      "DMN",
+      "DECISION_EVALUATION_ERROR",
+      "decision table",
+      "FEEL",
+      "type mismatch",
+      "null input"
+    ],
+    "priority": "high",
+    "summary": "Procedures for diagnosing and fixing DMN decision table evaluation errors, missing input clauses, and FEEL runtime type mismatches.",
+    "root_cause_template": "DMN decision table evaluation failed at '{task_name}' due to missing, null, or type-incompatible input variables.",
+    "recommended_actions": [
+      "Open the DMN model and inspect all input clause expressions for required variable dependencies.",
+      "Verify upstream worker tasks are properly populating required input variables prior to DMN evaluation.",
+      "Add default fallback rows in the DMN decision table (e.g. catch-all rule with default score for null/unknown inputs).",
+      "Validate input data formats and implement defensive FEEL type conversions (e.g. number(score)).",
+      "Deploy updated DMN decision to Zeebe and retry the incident in Camunda Operate."
+    ]
+  },
+  {
+    "id": "form-not-found",
+    "file": "form-not-found.yml",
+    "title": "User Task Form Registry Binding & Missing Schema SOP",
+    "error_types": [
+      "FORM_NOT_FOUND",
+      "FORM_BINDING_ERROR",
+      "FORM_SCHEMA_INVALID"
+    ],
+    "services": [
+      "customer-onboarding-process",
+      "user-task-service",
+      "tasklist",
+      "*"
+    ],
+    "tags": [
+      "FORM_NOT_FOUND",
+      "user task",
+      "formKey",
+      "formId",
+      "Camunda Form",
+      "Tasklist"
+    ],
+    "priority": "high",
+    "summary": "Remediation guide for user tasks failing to render due to missing form schemas or invalid form binding IDs in the Camunda Form Registry.",
+    "root_cause_template": "User task '{task_name}' referenced formId '{form_id}' which does not exist in the active Camunda Form registry.",
+    "recommended_actions": [
+      "In Camunda Modeler, inspect the user task '{task_name}' and verify the linked formId / formKey.",
+      "Deploy the matching .form JSON schema file alongside the BPMN process to Zeebe.",
+      "Check the Camunda Tasklist and Zeebe form registry to confirm the schema version matches runtime compatibility.",
+      "Once the form schema is deployed, retry the blocked user task instance in Camunda Operate."
+    ]
+  },
+  {
+    "id": "kafka-timeout",
+    "file": "kafka-timeout.yml",
+    "title": "Kafka Producer Delivery Timeout & Broker Partition Loss SOP",
+    "error_types": [
+      "KAFKA_TIMEOUT",
+      "MessageDeliveryException",
+      "BrokerNotAvailableException",
+      "RecordBatchTimeoutException"
+    ],
+    "services": [
+      "event-bridge",
+      "order-fulfillment-process",
+      "notification-service",
+      "*"
+    ],
+    "tags": [
+      "Kafka",
+      "KAFKA_TIMEOUT",
+      "producer",
+      "broker",
+      "partition",
+      "buffer saturation",
+      "backpressure"
+    ],
+    "priority": "critical",
+    "summary": "Procedures for Kafka producer delivery timeouts, partition leader reconnects, and event buffer saturation recovery.",
+    "root_cause_template": "Kafka producer in {service} failed to deliver records within timeout window due to broker disconnect or partition leader re-election.",
+    "recommended_actions": [
+      "Verify Kafka cluster health and broker availability using 'kafka-broker-api-versions.sh --bootstrap-server localhost:9092'.",
+      "Inspect topic partition leadership and ISR list: 'kafka-topics.sh --describe --topic {topic_name}'.",
+      "Ensure min.insync.replicas is satisfied and healthy brokers are online.",
+      "Tune producer timeout resilience: delivery.timeout.ms=180000 and max.block.ms=30000.",
+      "Resume event bridge worker processing and retry the failed task in Camunda Operate."
+    ]
+  },
+  {
+    "id": "http-500-job-no-retries",
+    "file": "http-500-job-no-retries.yml",
+    "title": "Upstream HTTP 5xx Gateway Outage & Worker Retries Exhaustion SOP",
+    "error_types": [
+      "HTTP_500",
+      "JOB_NO_RETRIES",
+      "PaymentGatewayTimeout",
+      "ServiceUnavailableException",
+      "GatewayTimeout"
+    ],
+    "services": [
+      "checkout-process",
+      "payment-gateway",
+      "auth-service",
+      "*"
+    ],
+    "tags": [
+      "HTTP_500",
+      "JOB_NO_RETRIES",
+      "504",
+      "503",
+      "retries",
+      "circuit breaker",
+      "gateway timeout"
+    ],
+    "priority": "critical",
+    "summary": "Remediation guide for upstream 5xx errors, exhausted worker retries (JOB_NO_RETRIES), and circuit breaker failover.",
+    "root_cause_template": "External upstream service returned HTTP {status_code} error to {service}. Automated retries were exhausted, suspending the Zeebe job.",
+    "recommended_actions": [
+      "Check upstream provider status page and inspect worker logs for response payloads and error codes.",
+      "Implement a Circuit Breaker (Resilience4j / Envoy) to fail fast and trigger automated fallback workflows.",
+      "Once upstream service recovers, increment incident retries (e.g. set retries=3) in Camunda Operate.",
+      "Resolve the incident in Camunda Operate to allow the job worker to re-execute."
+    ]
+  },
+  {
+    "id": "extract-value-error",
+    "file": "extract-value-error.yml",
+    "title": "FEEL Variable Extraction & Undefined Scope Resolution SOP",
+    "error_types": [
+      "EXTRACT_VALUE_ERROR",
+      "VARIABLE_NOT_FOUND",
+      "PROPERTY_ACCESS_ERROR"
+    ],
+    "services": [
+      "orderProcess",
+      "billing-service",
+      "*"
+    ],
+    "tags": [
+      "EXTRACT_VALUE_ERROR",
+      "FEEL",
+      "variable extraction",
+      "null pointer",
+      "scope"
+    ],
+    "priority": "medium",
+    "summary": "Playbook for diagnosing FEEL variable extraction errors and undefined property access in task scopes.",
+    "root_cause_template": "FEEL expression failed to extract property '{property_name}' because the variable is null or missing in the current execution scope.",
+    "recommended_actions": [
+      "Identify the failing FEEL expression and inspect variable scope at the failure element in Camunda Operate.",
+      "Verify upstream worker tasks are correctly creating the required payload variables.",
+      "Use null-coalescing expressions in FEEL mappings: if myVar != null then myVar else 'default'.",
+      "Redeploy the BPMN model and retry the incident in Camunda Operate."
+    ]
+  },
+  {
+    "id": "io-mapping-error",
+    "file": "io-mapping-error.yml",
+    "title": "BPMN Task Input/Output Variable Mapping Failure SOP",
+    "error_types": [
+      "IO_MAPPING_ERROR",
+      "INPUT_MAPPING_ERROR",
+      "OUTPUT_MAPPING_ERROR"
+    ],
+    "services": [
+      "orderProcess",
+      "customer-service",
+      "*"
+    ],
+    "tags": [
+      "IO_MAPPING_ERROR",
+      "input mapping",
+      "output mapping",
+      "type mismatch",
+      "variable mapping"
+    ],
+    "priority": "medium",
+    "summary": "Standard operating procedure for resolving task input and output variable mapping failures and type mismatches.",
+    "root_cause_template": "Input/Output variable mapping failed on '{task_name}'. Source expression could not be evaluated or target variable type was incompatible.",
+    "recommended_actions": [
+      "Open the task in Camunda Modeler and inspect the Input/Output variable mappings.",
+      "Ensure all source variables exist in the instance scope before the task executes.",
+      "Validate data types between source expressions and target variables.",
+      "Redeploy the BPMN model and retry the incident in Camunda Operate."
+    ]
+  },
+  {
+    "id": "redis-timeout",
+    "file": "redis-timeout.yml",
+    "title": "Redis Connection Pool Saturation & Cluster Timeout SOP",
+    "error_types": [
+      "REDIS_TIMEOUT",
+      "LettuceConnectionException",
+      "RedisConnectionException",
+      "REDIS_CLUSTER_OOM_DEADLOCK"
+    ],
+    "services": [
+      "payment-gateway",
+      "auth-token-service",
+      "cache-service",
+      "*"
+    ],
+    "tags": [
+      "Redis",
+      "Lettuce",
+      "connection timeout",
+      "cluster",
+      "OOM",
+      "deadlock",
+      "cache"
+    ],
+    "priority": "high",
+    "summary": "Remediation guide for Lettuce/Jedis Redis connection pool timeouts, Redis cluster node failover, and memory eviction deadlocks.",
+    "root_cause_template": "Redis connection timeout in {service}. Worker timed out after {timeout_ms}ms attempting to acquire a connection to the Redis cluster.",
+    "recommended_actions": [
+      "Inspect Redis cluster node health: 'redis-cli -h {redis_host} -p {redis_port} cluster nodes'.",
+      "Check memory usage and eviction rate: 'redis-cli info memory'. If maxmemory is exceeded, adjust maxmemory-policy to volatile-lru.",
+      "Increase client pool size (e.g. lettuce.pool.max-active=50) and command timeout (timeout=5000ms).",
+      "Restart degraded client worker pods to re-establish clean connection pool channels."
+    ]
+  }
+]

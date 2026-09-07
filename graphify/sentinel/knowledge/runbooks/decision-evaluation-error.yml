@@ -1,0 +1,60 @@
+id: decision-evaluation-error
+name: DMN Decision Table Evaluation & FEEL Runtime Type Error SOP
+version: "1.0.0"
+category: DMN_EVALUATION_ERROR
+priority: HIGH
+
+scope:
+  engine: "Camunda 8.x"
+  services:
+    - "loan-approval-process"
+    - "risk-scoring"
+    - "credit-check"
+    - "*"
+  error_types:
+    - "DECISION_EVALUATION_ERROR"
+    - "FEEL_EVALUATION_ERROR"
+    - "DMN_EVALUATION_ERROR"
+  tags:
+    - "DMN"
+    - "DECISION_EVALUATION_ERROR"
+    - "decision table"
+    - "FEEL"
+    - "type mismatch"
+    - "null input"
+
+trigger:
+  pattern: "FEEL-EVALUATION-ERROR.*expected.*but got"
+  log_keywords:
+    - "DECISION_EVALUATION_ERROR"
+    - "FEEL_EVALUATION_ERROR"
+    - "DMN"
+    - "failed to evaluate decision"
+
+diagnosis:
+  summary: "Procedures for diagnosing and fixing DMN decision table evaluation errors, missing input clauses, and FEEL runtime type mismatches."
+  root_cause_template: "DMN decision table evaluation failed at '{task_name}' due to missing, null, or type-incompatible input variables."
+
+remediation:
+  automated_actions:
+    - step: 1
+      action: "INSPECT_DMN_INPUTS"
+      description: "Open the DMN model and inspect all input clause expressions for required variable dependencies."
+    - step: 2
+      action: "ENSURE_UPSTREAM_VARIABLE_POPULATION"
+      description: "Verify upstream worker tasks are properly populating required input variables prior to DMN evaluation."
+    - step: 3
+      action: "ADD_FALLBACK_DEFAULT_RULE"
+      description: "Add default fallback rows in the DMN decision table (e.g. catch-all rule with default score for null/unknown inputs)."
+    - step: 4
+      action: "DEFENSIVE_TYPE_CONVERSION"
+      syntax_example: "= number(creditScore)"
+      description: "Validate input data formats and implement defensive FEEL type conversions (e.g. number(score))."
+    - step: 5
+      action: "REDEPLOY_AND_RETRY"
+      description: "Deploy updated DMN decision to Zeebe and retry the incident in Camunda Operate."
+
+verification:
+  checks:
+    - "DMN decision table evaluates cleanly with test input payloads."
+    - "No unhandled null pointer or type mismatch exceptions during execution."

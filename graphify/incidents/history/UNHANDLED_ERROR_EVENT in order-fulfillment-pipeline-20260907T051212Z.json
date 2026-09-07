@@ -1,0 +1,41 @@
+{
+  "alert_name": "UNHANDLED_ERROR_EVENT in order-fulfillment-pipeline",
+  "service": "order-fulfillment-pipeline",
+  "environment": "production",
+  "error": "UNHANDLED_ERROR_EVENT",
+  "error_message": "Expected to throw an error event with the code 'PAYMENT_GATEWAY_TIMEOUT' with message 'HikariPool-1: Connection is not available, request timed out after 30000ms. RootCause: PostgreSQL query lock wait timeout on table payments_ledger (PID: 49120 blocked by PID: 48911). Downstream payment gateway https://api.stripe.com/v1/charges returned HTTP 504 Gateway Timeout after 3 retries exhausted. Camunda 8.9 Zeebe job worker payment-processor-worker threw BPMN Error [code: PAYMENT_GATEWAY_TIMEOUT] but no Error Boundary Catch Event was found in scope Activity_ChargePaymentGateway or parent Parallel Gateway scope.', but it was not caught. No error events are available in the scope.",
+  "logs": [
+    "2026-09-07T10:12:30.015Z [order-service] [main] INFO  c.t.order.OrderApplication - Processing Order [ORD-998241] for Customer [CUST-884102] with total $4250.75 USD",
+    "2026-09-07T10:12:45.670Z [payment-service] [lock-cleaner-thread] WARN  org.redisson.RedissonLock - High lock contention detected on resource 'lock:order:ORD-998241', lease time 15000ms",
+    "2026-09-07T10:13:00.210Z [payment-service] [circuit-breaker-worker] WARN  io.github.resilience4j.circuitbreaker - CircuitBreaker 'stripeService' state transition: CLOSED -> OPEN (failure rate: 68.4% >= threshold 50.0%)",
+    "2026-09-07T10:13:25.882Z [payment-service] [stripe-client-3] ERROR c.t.payment.client.StripeAdapter - Upstream POST https://api.stripe.com/v1/charges returned HTTP 504 Gateway Timeout (attempt 3/3, total elapsed: 28400ms, traceId=tr-9f4a8b2c-e5d1-419a-9e12-8f6a9c14bb01)",
+    "2026-09-07T10:13:30.155Z [postgres-db-primary] [postgres] [PID 49120] ERROR: canceling statement due to statement timeout (timeout=30000ms) on 'UPDATE payments_ledger SET status = 'FAILED_TIMEOUT', updated_at = NOW() WHERE order_id = 'ORD-998241''",
+    "2026-09-07T10:13:30.158Z [postgres-db-primary] [postgres] [PID 49120] DETAIL: Process 49120 waits for ExclusiveLock on transaction 88924011; blocked by process 48911 (running batch reconciliation report for 184200ms).",
+    "2026-09-07T10:13:45.012Z [payment-service] [HikariHouseKeeper] WARN  c.z.hikari.pool.ProxyConnection - Apparent connection leak detected for connection org.postgresql.jdbc.PgConnection@6b7a2d1 on thread http-nio-8080-exec-4 (held for 48200ms)",
+    "2026-09-07T10:13:58.421Z [payment-service] [http-nio-8080-exec-18] ERROR c.z.hikari.pool.HikariPool - HikariPool-1 - Connection is not available, request timed out after 30000ms (total=50, active=50, idle=0, waiting=114)",
+    "2026-09-07T10:14:01.890Z [Zeebe-Client-Worker] [JobWorker-Payment-4] ERROR io.camunda.zeebe.client.job.poller - Worker 'payment-processor-worker' completed job key 2251799813892035 with throwError(errorCode='PAYMENT_GATEWAY_TIMEOUT', errorMessage='PaymentGatewayTimeout: High error rate (68.4%) on payment-service. DatabaseConnectionPoolExhausted: Unable to acquire connection from pool after 30000ms.')",
+    "2026-09-07T10:14:02.114Z [Broker-0-Zeebe] [StreamProcessor-1] WARN  io.camunda.zeebe.engine.processing - [Incident Event] Incident created in process 'order-fulfillment-pipeline' (key: 2251799813892014, element: Activity_ChargePaymentGateway): UNHANDLED_ERROR_EVENT - Expected to throw error event with code 'PAYMENT_GATEWAY_TIMEOUT', but no catch event was found in scope hierarchy."
+  ],
+  "timeline": [
+    "10:12:30 \u2014 Process instance 2251799813892014 started in Camunda 8.9",
+    "10:12:45 \u2014 Distributed lock acquired for order ORD-998241",
+    "10:13:00 \u2014 CircuitBreaker 'stripeService' tripped to OPEN (68.4% error rate)",
+    "10:13:25 \u2014 Upstream payment provider returned HTTP 504 Gateway Timeout after 3 retries",
+    "10:13:30 \u2014 PostgreSQL query lock wait timeout on payments_ledger table (PID: 49120 blocked by PID: 48911)",
+    "10:13:45 \u2014 HikariCP connection leak detected on thread http-nio-8080-exec-4 (held for 48200ms)",
+    "10:13:58 \u2014 HikariCP connection pool saturated (total=50, active=50, waiting=114)",
+    "10:14:01 \u2014 Zeebe payment worker threw BPMN error 'PAYMENT_GATEWAY_TIMEOUT'",
+    "10:14:02 \u2014 Camunda 8.9 engine created UNHANDLED_ERROR_EVENT incident at Activity_ChargePaymentGateway"
+  ],
+  "severity": "high",
+  "timestamp": null,
+  "variables": null,
+  "bpmn_topology": null,
+  "element_id": null,
+  "element_name": null,
+  "process_id": null,
+  "instance_key": null,
+  "incident_key": null,
+  "camunda_version": "8.9",
+  "request": "Investigate UNHANDLED_ERROR_EVENT in order-fulfillment-pipeline (production)"
+}

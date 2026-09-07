@@ -1,0 +1,22 @@
+{
+  "alert_name": "orderProcess-unhandled_error_event",
+  "service": "orderProcess",
+  "environment": "production",
+  "error": "UNHANDLED_ERROR_EVENT",
+  "error_message": "Expected to throw an error event with the code PROCESS_ERROR with message PaymentGatewayTimeout",
+  "logs": [],
+  "timeline": [
+    "2026-09-07T09:22:35Z orderProcess error detected"
+  ],
+  "severity": "high",
+  "timestamp": "2026-09-07T09:22:35Z",
+  "variables": null,
+  "bpmn_topology": null,
+  "element_id": "Activity_0luysxt",
+  "element_name": null,
+  "process_id": null,
+  "instance_key": "2251799813743477",
+  "incident_key": "2251799813743496",
+  "camunda_version": "8.9",
+  "request": "Determine what failed, identify the most likely root cause using the supplied evidence, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}

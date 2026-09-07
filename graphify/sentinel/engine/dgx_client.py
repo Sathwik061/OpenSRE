@@ -28,10 +28,14 @@ DGX_MODEL = os.getenv("DGX_MODEL", "nvidia/Qwen3.6-35B-A3B-NVFP4")
 
 
 def is_dgx_available() -> bool:
-    """Check if the local SSH tunnel to DGX vLLM is active on port 8000."""
+    """Check if the local SSH tunnel to DGX vLLM is active on port 8000 (fast socket check < 0.3s)."""
+    import socket
     try:
+        # Fast TCP handshake probe (fails in ~1ms on localhost if port is closed)
+        with socket.create_connection(("127.0.0.1", 8000), timeout=0.3):
+            pass
         req = urllib.request.Request(f"{DGX_URL}/models", method="GET")
-        with urllib.request.urlopen(req, timeout=3) as resp:
+        with urllib.request.urlopen(req, timeout=1.5) as resp:
             return resp.status == 200
     except Exception:
         return False
@@ -239,10 +243,19 @@ def investigate_with_dgx(incident_payload: Dict[str, Any]) -> Optional[Dict[str,
     """
     sop = None
     try:
-        from sentinel.knowledge.supabase_runbook import lookup_sop_guidelines
+        from sentinel.knowledge.runbook_knowledge import lookup_sop_guidelines
         err_type = incident_payload.get("error_type") or incident_payload.get("error") or ""
         proc_id  = incident_payload.get("process_id") or incident_payload.get("service") or "*"
-        sop = lookup_sop_guidelines(err_type, proc_id)
+        msg      = incident_payload.get("error_message") or ""
+        logs     = incident_payload.get("logs") or []
+        elem_id  = incident_payload.get("element_id") or ""
+        sop = lookup_sop_guidelines(
+            error_type=err_type,
+            service=proc_id,
+            error_message=msg,
+            logs=logs,
+            element_id=elem_id,
+        )
     except Exception as e:
         logger.debug(f"SOP lookup in investigate_with_dgx skipped: {e}")
 

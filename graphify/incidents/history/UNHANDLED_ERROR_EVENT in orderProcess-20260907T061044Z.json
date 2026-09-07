@@ -1,0 +1,43 @@
+{
+  "alert_name": "UNHANDLED_ERROR_EVENT in orderProcess",
+  "service": "orderProcess",
+  "environment": "production",
+  "error": "UNHANDLED_ERROR_EVENT",
+  "error_message": "[ERROR] [payment-service] PaymentGatewayTimeout: High error rate (45.2%) on payment-service. DatabaseConnectionPoolExhausted: Unable to acquire connection from pool after 30000ms timeout. Affected service: payment-service",
+  "logs": [
+    "2026-09-04 15:40:24.112 [orderProcess-worker-1] [INFO] [orderProcess] Starting process instance execution for instanceKey: 2251799813742455, processDefinitionKey: 2251799813735112, bpmnProcessId: orderProcess",
+    "2026-09-04 15:40:24.341 [orderProcess-worker-1] [INFO] [orderProcess] Element StartEvent_1 passed. Forking parallel gateway Gateway_Fork_Order",
+    "2026-09-04 15:40:24.610 [payment-service-worker-4] [INFO] [payment-service] Received job for Activity_0luysxt (Charge Payment Gateway). Amount: $1,450.00, Currency: USD, Tenant: production",
+    "2026-09-04 15:40:25.890 [inventory-service-worker-2] [INFO] [inventory-service] Received job for Activity_18g8m7k (Pack Warehouse Items). Status: RESERVED",
+    "2026-09-04 15:40:28.405 [payment-service-worker-4] [WARN] [payment-service] com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Connection is not available, request timed out after 30000ms. Active: 50, Idle: 0, Total: 50, Waiting: 42",
+    "2026-09-04 15:40:31.210 [payment-service-worker-4] [ERROR] [payment-service] PaymentGatewayTimeout: High error rate (45.2%) on payment-service. DatabaseConnectionPoolExhausted: Unable to acquire connection from pool after 30000ms timeout. Affected service: payment-service",
+    "org.postgresql.util.PSQLException: Connection to 10.0.4.12:5432 refused. Connection pool exhausted.",
+    "\tat com.zaxxer.hikari.pool.HikariPool.getConnection(HikariPool.java:227)",
+    "\tat com.zaxxer.hikari.HikariDataSource.getConnection(HikariDataSource.java:128)",
+    "\tat com.truviq.ecommerce.payment.repository.TransactionRepository.lockRow(TransactionRepository.java:94)",
+    "\tat com.truviq.ecommerce.payment.service.StripeGatewayClient.charge(StripeGatewayClient.java:182)",
+    "\tat com.truviq.ecommerce.payment.worker.CamundaJobHandler.handle(CamundaJobHandler.java:68)",
+    "2026-09-04 15:40:33.415 [payment-service-worker-4] [ERROR] [payment-service] Stripe HTTP 504 Gateway Timeout: Gateway did not receive a timely response from upstream provider",
+    "2026-09-04 15:40:35.004 [zeebe-cluster-node-0] [FATAL] [orderProcess] UNHANDLED_ERROR_EVENT in orderProcess (instanceKey: 2251799813742455, incidentKey: 2251799813742475, elementId: Activity_0luysxt)",
+    "Expected to throw an error event with the code 'PROCESS_ERROR' with message 'PaymentGatewayTimeout: High error rate (45.2%) on payment-service. DatabaseConnectionPoolExhausted: Unable to acquire connection from pool after 30000ms timeout. Affected service: payment-service', but it was not caught. No error events are available in the scope.",
+    "2026-09-04 15:40:35.012 [zeebe-cluster-node-0] [WARN] [orderProcess] [TOPOLOGY_HAZARD] Activity_0luysxt is in parallel branch from Gateway_Fork_Order joining at Gateway_Join_Order. Unhandled error diverted token away from join. Parallel Join Deadlock imminent."
+  ],
+  "timeline": [
+    "15:40:24 \u2014 .112 [orderProcess-worker-1] [INFO] [orderProcess] Starting process instance execution for instanceKey: 2251799813742455",
+    "15:40:24 \u2014 .341 [orderProcess-worker-1] [INFO] [orderProcess] Element StartEvent_1 passed. Forking parallel gateway Gateway_Fork_Or",
+    "15:40:24 \u2014 .610 [payment-service-worker-4] [INFO] [payment-service] Received job for Activity_0luysxt (Charge Payment Gateway). Amo",
+    "15:40:25 \u2014 .890 [inventory-service-worker-2] [INFO] [inventory-service] Received job for Activity_18g8m7k (Pack Warehouse Items). S",
+    "15:40:28 \u2014 .405 [payment-service-worker-4] [WARN] [payment-service] com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Connection i"
+  ],
+  "severity": "high",
+  "timestamp": null,
+  "variables": null,
+  "bpmn_topology": null,
+  "element_id": null,
+  "element_name": null,
+  "process_id": null,
+  "instance_key": null,
+  "incident_key": null,
+  "camunda_version": "8.9",
+  "request": "Investigate UNHANDLED_ERROR_EVENT in orderProcess (production)"
+}

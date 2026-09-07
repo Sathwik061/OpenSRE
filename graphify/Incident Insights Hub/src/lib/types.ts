@@ -106,6 +106,7 @@ export interface HistoryRecord {
   rawOutput?: string;
   notes?: string;
   tags?: string[];
+  camunda_version?: string;
 }
 
 export interface IncidentCase {

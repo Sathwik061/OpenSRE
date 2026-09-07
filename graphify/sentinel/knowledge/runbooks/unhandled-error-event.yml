@@ -1,0 +1,72 @@
+id: unhandled-error-event
+name: Unhandled BPMN Error Event & Parallel Deadlock SOP
+version: "1.0.0"
+category: BPMN_RUNTIME_ERROR
+priority: CRITICAL
+
+scope:
+  engine: "Camunda 8.x"
+  services:
+    - "orderProcess"
+    - "orderFulfillmentProcess"
+    - "payment-gateway"
+    - "billing-service"
+    - "*"
+  error_types:
+    - "UNHANDLED_ERROR_EVENT"
+    - "ERROR_EVENT"
+    - "ERROR_CODE_UNHANDLED"
+    - "PROCESS_ERROR"
+    - "PAYMENT_FAILED"
+  tags:
+    - "UNHANDLED_ERROR_EVENT"
+    - "error boundary"
+    - "error catch"
+    - "errorCode"
+    - "parallel deadlock"
+    - "token starvation"
+    - "boundaryEvent"
+    - "PAYMENT_FAILED"
+    - "PROCESS_ERROR"
+
+trigger:
+  pattern: "Expected to throw an error event with the code .* but it was not caught"
+  log_keywords:
+    - "UNHANDLED_ERROR_EVENT"
+    - "Throwing BPMN Error"
+    - "No error boundary catch events"
+
+diagnosis:
+  summary: "Standard operating playbook for resolving unhandled BPMN error throw events, missing error boundaries, and downstream parallel join deadlocks."
+  root_cause_template: "Task '{task_name}' ({element_id}) threw a business error (code: '{error_code}') which was not caught in the active execution scope. {topology_hazard}"
+  topology_checks:
+    - check: "parallel_fork_deadlock"
+      description: "Verify if failing task is in a parallel split without terminate or scope error handler."
+    - check: "missing_boundary_catch"
+      description: "Verify if task boundary has an attached Error Catch Event with matching errorCode."
+
+remediation:
+  automated_actions:
+    - step: 1
+      action: "ATTACH_ERROR_BOUNDARY"
+      target_element: "{task_name}"
+      parameters:
+        error_code: "{error_code}"
+      description: "Add an Error Boundary Catch Event with errorCode '{error_code}' to the '{task_name}' task boundary in Camunda Modeler."
+    - step: 2
+      action: "PREVENT_PARALLEL_DEADLOCK"
+      condition: "inside_parallel_branch == true"
+      description: "If the failing task is inside a Parallel Fork, route the error sequence flow to a Terminate End Event or attach an interrupting Error Boundary Event to the parent subprocess scope to prevent downstream token starvation deadlocks."
+    - step: 3
+      action: "INVESTIGATE_UPSTREAM_SERVICE"
+      target_service: "{service}"
+      description: "Investigate upstream service logs ({service}) to resolve the root infrastructure or business exception triggering the error throw."
+    - step: 4
+      action: "REDEPLOY_AND_RETRY"
+      description: "Redeploy the updated BPMN XML to Zeebe and retry the incident in Camunda Operate."
+
+verification:
+  checks:
+    - "Error Boundary Event attached to failing task boundary with exact errorCode."
+    - "No parallel branches stranded without reaching join or terminate end event."
+    - "Incident resolved in Camunda Operate and token successfully advanced."

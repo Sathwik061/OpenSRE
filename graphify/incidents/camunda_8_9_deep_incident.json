@@ -1,0 +1,132 @@
+{
+  "alert_name": "UNHANDLED_ERROR_EVENT in order-fulfillment-pipeline",
+  "service": "order-fulfillment-pipeline",
+  "environment": "production",
+  "severity": "critical",
+  "camunda_version": "8.9",
+  "error": "UNHANDLED_ERROR_EVENT",
+  "error_type": "UNHANDLED_ERROR_EVENT",
+  "error_message": "Expected to throw an error event with the code 'PAYMENT_GATEWAY_TIMEOUT' with message 'HikariPool-1: Connection is not available, request timed out after 30000ms. RootCause: PostgreSQL query lock wait timeout on table payments_ledger (PID: 49120 blocked by PID: 48911). Downstream payment gateway https://api.stripe.com/v1/charges returned HTTP 504 Gateway Timeout after 3 retries exhausted. Camunda 8.9 Zeebe job worker payment-processor-worker threw BPMN Error [code: PAYMENT_GATEWAY_TIMEOUT] but no Error Boundary Catch Event was found in scope Activity_ChargePaymentGateway or parent Parallel Gateway scope.', but it was not caught. No error events are available in the scope.",
+  "process_id": "order-fulfillment-pipeline",
+  "process_definition_id": "order-fulfillment-pipeline",
+  "instance_key": "2251799813892014",
+  "incident_key": "2251799813892049",
+  "element_id": "Activity_ChargePaymentGateway",
+  "element_name": "Process Payment & Deduct Inventory",
+  "creation_time": "2026-09-07T10:14:02Z",
+  "timestamp": "2026-09-07T10:14:02Z",
+  "variables": {
+    "orderId": "ORD-998241",
+    "customerId": "CUST-884102",
+    "amount": 4250.75,
+    "currency": "USD",
+    "paymentMethod": "CREDIT_CARD_VISA",
+    "retryCount": 3,
+    "traceId": "tr-9f4a8b2c-e5d1-419a-9e12-8f6a9c14bb01",
+    "dbPoolActive": 50,
+    "dbPoolMax": 50,
+    "dbPoolWaiting": 114,
+    "circuitBreakerStatus": "OPEN",
+    "pgLockBlockingPid": 48911,
+    "pgLockBlockedPid": 49120
+  },
+  "logs": [
+    "2026-09-07T10:12:30.015Z [order-service] [main] INFO  c.t.order.OrderApplication - Processing Order [ORD-998241] for Customer [CUST-884102] with total $4250.75 USD",
+    "2026-09-07T10:12:45.670Z [payment-service] [lock-cleaner-thread] WARN  org.redisson.RedissonLock - High lock contention detected on resource 'lock:order:ORD-998241', lease time 15000ms",
+    "2026-09-07T10:13:00.210Z [payment-service] [circuit-breaker-worker] WARN  io.github.resilience4j.circuitbreaker - CircuitBreaker 'stripeService' state transition: CLOSED -> OPEN (failure rate: 68.4% >= threshold 50.0%)",
+    "2026-09-07T10:13:25.882Z [payment-service] [stripe-client-3] ERROR c.t.payment.client.StripeAdapter - Upstream POST https://api.stripe.com/v1/charges returned HTTP 504 Gateway Timeout (attempt 3/3, total elapsed: 28400ms, traceId=tr-9f4a8b2c-e5d1-419a-9e12-8f6a9c14bb01)",
+    "2026-09-07T10:13:30.155Z [postgres-db-primary] [postgres] [PID 49120] ERROR: canceling statement due to statement timeout (timeout=30000ms) on 'UPDATE payments_ledger SET status = 'FAILED_TIMEOUT', updated_at = NOW() WHERE order_id = 'ORD-998241''",
+    "2026-09-07T10:13:30.158Z [postgres-db-primary] [postgres] [PID 49120] DETAIL: Process 49120 waits for ExclusiveLock on transaction 88924011; blocked by process 48911 (running batch reconciliation report for 184200ms).",
+    "2026-09-07T10:13:45.012Z [payment-service] [HikariHouseKeeper] WARN  c.z.hikari.pool.ProxyConnection - Apparent connection leak detected for connection org.postgresql.jdbc.PgConnection@6b7a2d1 on thread http-nio-8080-exec-4 (held for 48200ms)",
+    "2026-09-07T10:13:58.421Z [payment-service] [http-nio-8080-exec-18] ERROR c.z.hikari.pool.HikariPool - HikariPool-1 - Connection is not available, request timed out after 30000ms (total=50, active=50, idle=0, waiting=114)",
+    "2026-09-07T10:14:01.890Z [Zeebe-Client-Worker] [JobWorker-Payment-4] ERROR io.camunda.zeebe.client.job.poller - Worker 'payment-processor-worker' completed job key 2251799813892035 with throwError(errorCode='PAYMENT_GATEWAY_TIMEOUT', errorMessage='PaymentGatewayTimeout: High error rate (68.4%) on payment-service. DatabaseConnectionPoolExhausted: Unable to acquire connection from pool after 30000ms.')",
+    "2026-09-07T10:14:02.114Z [Broker-0-Zeebe] [StreamProcessor-1] WARN  io.camunda.zeebe.engine.processing - [Incident Event] Incident created in process 'order-fulfillment-pipeline' (key: 2251799813892014, element: Activity_ChargePaymentGateway): UNHANDLED_ERROR_EVENT - Expected to throw error event with code 'PAYMENT_GATEWAY_TIMEOUT', but no catch event was found in scope hierarchy."
+  ],
+  "timeline": [
+    "10:12:30 — Process instance 2251799813892014 started in Camunda 8.9",
+    "10:12:45 — Distributed lock acquired for order ORD-998241",
+    "10:13:00 — CircuitBreaker 'stripeService' tripped to OPEN (68.4% error rate)",
+    "10:13:25 — Upstream payment provider returned HTTP 504 Gateway Timeout after 3 retries",
+    "10:13:30 — PostgreSQL query lock wait timeout on payments_ledger table (PID: 49120 blocked by PID: 48911)",
+    "10:13:45 — HikariCP connection leak detected on thread http-nio-8080-exec-4 (held for 48200ms)",
+    "10:13:58 — HikariCP connection pool saturated (total=50, active=50, waiting=114)",
+    "10:14:01 — Zeebe payment worker threw BPMN error 'PAYMENT_GATEWAY_TIMEOUT'",
+    "10:14:02 — Camunda 8.9 engine created UNHANDLED_ERROR_EVENT incident at Activity_ChargePaymentGateway"
+  ],
+  "bpmn_topology": {
+    "camunda_version": "8.9",
+    "gateways": [
+      {
+        "id": "Gateway_Fork_Order",
+        "name": "Parallel Fork Fulfillment",
+        "type": "PARALLEL",
+        "role": "FORK",
+        "incoming_sources": ["Activity_ValidateOrder"],
+        "outgoing_targets": ["Activity_PackWarehouseItems", "Activity_ChargePaymentGateway"]
+      },
+      {
+        "id": "Gateway_Join_Order",
+        "name": "Parallel Join Fulfillment",
+        "type": "PARALLEL",
+        "role": "JOIN",
+        "incoming_sources": ["Activity_PackWarehouseItems", "Activity_ChargePaymentGateway"],
+        "outgoing_targets": ["Activity_ShipOrder"]
+      }
+    ],
+    "boundary_events": [],
+    "tasks": [
+      {
+        "id": "Activity_ValidateOrder",
+        "name": "Validate Order",
+        "type": "serviceTask",
+        "incoming": ["StartEvent_1"],
+        "outgoing": ["Gateway_Fork_Order"]
+      },
+      {
+        "id": "Activity_PackWarehouseItems",
+        "name": "Pack Warehouse Items",
+        "type": "serviceTask",
+        "incoming": ["Gateway_Fork_Order"],
+        "outgoing": ["Gateway_Join_Order"]
+      },
+      {
+        "id": "Activity_ChargePaymentGateway",
+        "name": "Process Payment & Deduct Inventory",
+        "type": "serviceTask",
+        "incoming": ["Gateway_Fork_Order"],
+        "outgoing": ["Gateway_Join_Order"]
+      },
+      {
+        "id": "Activity_ShipOrder",
+        "name": "Ship Order to Customer",
+        "type": "serviceTask",
+        "incoming": ["Gateway_Join_Order"],
+        "outgoing": ["EndEvent_1"]
+      }
+    ],
+    "parallel_fork_branches": [
+      {
+        "fork_id": "Gateway_Fork_Order",
+        "fork_name": "Parallel Fork Fulfillment",
+        "branch_entry_elements": ["Activity_PackWarehouseItems", "Activity_ChargePaymentGateway"],
+        "description": "Parallel Fork 'Parallel Fork Fulfillment' splits into concurrent branches: ['Activity_PackWarehouseItems', 'Activity_ChargePaymentGateway']"
+      }
+    ],
+    "incident_element_context": {
+      "element_id": "Activity_ChargePaymentGateway",
+      "element_name": "Process Payment & Deduct Inventory",
+      "element_type": "serviceTask",
+      "inside_parallel_branch": true,
+      "fork_name": "Parallel Fork Fulfillment",
+      "parallel_join_name": "Parallel Join Fulfillment",
+      "has_error_boundary_event": false,
+      "deadlock_risk": "PARALLEL GATEWAY DEADLOCK RISK: Task 'Process Payment & Deduct Inventory' (Activity_ChargePaymentGateway) is on a concurrent branch spawned by Parallel Fork 'Parallel Fork Fulfillment' leading to Parallel Join 'Parallel Join Fulfillment'. If this task fails or its token is diverted without reaching the join, the Parallel Join will wait indefinitely for a token that will never arrive (Token Starvation Deadlock). RECOMMENDATION: In Camunda Modeler, attach an Error Boundary Catch Event to 'Process Payment & Deduct Inventory' (Activity_ChargePaymentGateway) and route its outgoing sequence flow to a Terminate End Event (to cleanly cancel all concurrent parallel tokens and terminate the process), or route an error path directly into the Parallel Join.",
+      "missing_boundary_warning": "MISSING_ERROR_BOUNDARY_EVENT: Task 'Activity_ChargePaymentGateway' has NO Error Boundary Catch Event configured. RECOMMENDATION: In Camunda Modeler, attach an Error Boundary Catch Event with matching errorCode 'PAYMENT_GATEWAY_TIMEOUT' to task 'Activity_ChargePaymentGateway'."
+    },
+    "warnings": [
+      "MISSING_ERROR_BOUNDARY_EVENT: Task 'Activity_ChargePaymentGateway' has NO Error Boundary Catch Event configured. RECOMMENDATION: In Camunda Modeler, attach an Error Boundary Catch Event with matching errorCode 'PAYMENT_GATEWAY_TIMEOUT' to task 'Activity_ChargePaymentGateway'.",
+      "PARALLEL GATEWAY DEADLOCK RISK: Task 'Process Payment & Deduct Inventory' (Activity_ChargePaymentGateway) is on a concurrent branch spawned by Parallel Fork 'Parallel Fork Fulfillment' leading to Parallel Join 'Parallel Join Fulfillment'. If this task fails or its token is diverted by an error event without reaching the join, the Parallel Join 'Parallel Join Fulfillment' will wait indefinitely for a token that will never arrive (Token Starvation Deadlock). CRITICAL RECOMMENDATION: In Camunda Modeler, attach an Error Boundary Catch Event to 'Process Payment & Deduct Inventory' (Activity_ChargePaymentGateway) and route its outgoing sequence flow to a Terminate End Event (to cleanly cancel all concurrent parallel tokens and terminate the process), or route an error path directly into the Parallel Join."
+    ]
+  },
+  "request": "Determine what failed, identify the most likely root cause across the distributed architecture and Camunda 8.9 BPMN topology, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}

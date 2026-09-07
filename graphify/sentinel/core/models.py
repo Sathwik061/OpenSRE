@@ -70,6 +70,13 @@ class ErrorEvent(BaseModel):
     environment: str = "production"
     logs: List[str] = Field(default_factory=list)
     camunda_version: Optional[str] = "8.9"
+    element_id: Optional[str] = None
+    element_name: Optional[str] = None
+    process_id: Optional[str] = None
+    instance_key: Optional[str] = None
+    incident_key: Optional[str] = None
+    variables: Optional[Dict[str, Any]] = None
+    bpmn_topology: Optional[Dict[str, Any]] = None
     additional_context: Optional[dict] = None
 
 

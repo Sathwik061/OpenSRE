@@ -1,0 +1,72 @@
+id: redis-timeout
+name: Redis Connection Pool Saturation & Cluster Timeout SOP
+version: "1.0.0"
+category: INFRASTRUCTURE_ERROR
+priority: HIGH
+
+scope:
+  engine: "Camunda 8.x"
+  services:
+    - "payment-gateway"
+    - "billing-service"
+    - "order-service"
+    - "*"
+  error_types:
+    - "REDIS_TIMEOUT"
+    - "LettuceConnectionException"
+    - "RedisConnectionFailureException"
+    - "REDIS_CLUSTER_OOM_DEADLOCK"
+    - "REDIS_POOL_EXHAUSTED"
+  tags:
+    - "REDIS_TIMEOUT"
+    - "LettuceConnectionException"
+    - "redis connection pool"
+    - "redis-cluster"
+    - "maxmemory"
+    - "pool exhaustion"
+    - "spring.redis.lettuce"
+
+trigger:
+  pattern: "Unable to connect to redis-cluster.*after [0-9]+ms|LettuceConnectionException|RedisConnectionFailureException"
+  log_keywords:
+    - "LettuceConnectionException"
+    - "RedisConnectionFailureException"
+    - "redis-cluster"
+    - "Redis connection pool timeout"
+    - "REDIS_TIMEOUT"
+
+diagnosis:
+  summary: "Standard operating procedure for resolving Redis cluster timeouts, connection pool saturation, and memory-related write stalls affecting worker tasks."
+  root_cause_template: "Service {service} encountered Redis cluster connection timeout ({error_type}) while accessing cache/token store at redis-cluster:6379."
+  topology_checks:
+    - check: "redis_cluster_nodes"
+      command: "redis-cli -h redis-cluster -p 6379 cluster nodes"
+      description: "Verify Redis cluster node health, master-replica sync, and network connectivity."
+    - check: "redis_memory_info"
+      command: "redis-cli -h redis-cluster -p 6379 info memory"
+      description: "Inspect used memory versus maxmemory and monitor eviction rates."
+
+remediation:
+  automated_actions:
+    - step: 1
+      action: "CONFIGURE_EVICTION_POLICY"
+      parameters:
+        policy: "volatile-lru"
+      description: "Set maxmemory-policy volatile-lru or allkeys-lru on Redis master nodes to prevent OOM write stalls."
+    - step: 2
+      action: "TUNE_CONNECTION_POOL"
+      parameters:
+        max_active: 50
+        max_idle: 20
+        timeout: "5000ms"
+      description: "Increase client connection pool size and connection timeout in application configuration (e.g., spring.redis.lettuce.pool.max-active=50, spring.redis.timeout=5000ms)."
+    - step: 3
+      action: "RESTART_WORKER_PODS"
+      target_service: "{service}"
+      description: "Restart affected worker pods to clear stale connections and re-establish healthy Redis connection pools."
+
+verification:
+  checks:
+    - "Redis cluster responds to ping within < 5ms."
+    - "Worker error rate for Redis queries drops to 0%."
+    - "Zeebe job workers resume normal task processing."

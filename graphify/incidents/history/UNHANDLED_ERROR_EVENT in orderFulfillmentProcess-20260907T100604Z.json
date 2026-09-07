@@ -1,0 +1,33 @@
+{
+  "alert_name": "UNHANDLED_ERROR_EVENT in orderFulfillmentProcess",
+  "service": "orderFulfillmentProcess",
+  "environment": "production",
+  "error": "UNHANDLED_ERROR_EVENT",
+  "error_message": "[FATAL] [orderFulfillmentProcess] UNHANDLED_ERROR_EVENT: Expected to throw an error event with the code 'PAYMENT_FAILED' with message 'PaymentGatewayException: Card authorization failed for card 4532-1488-1234-5678 with secret token AIzaSyD-894729487294829472948294829', but it was not caught. No error events are available in the scope of element 'Activity_ProcessPayment'.",
+  "logs": [
+    "2026-09-07 10:14:01.215 [order-fulfillment-worker-1] [INFO] [orderFulfillmentProcess] Starting process instance on Camunda 8.9 for customerId: CUST-9921, orderId: ORD-88219, orderAmount: $1450.50, currency: USD",
+    "2026-09-07 10:14:01.450 [order-fulfillment-worker-1] [INFO] [orderFulfillmentProcess] Navigated from StartEvent_1 to ServiceTask_ProcessPayment (elementId: Activity_ProcessPayment)",
+    "2026-09-07 10:14:02.110 [payment-gateway-worker-3] [INFO] [payment-gateway] Processing payment transaction for customerId: CUST-9921, card: 4532-1488-1234-5678, cvv: 452, exp: 12/28",
+    "2026-09-07 10:14:04.882 [payment-gateway-worker-3] [WARN] [payment-gateway] Redis session cache connection pool timeout (LettuceConnectionException: Unable to connect to redis-cluster:6379 after 2000ms with auth: postgres://admin:SuperSecretDbPassword99@redis-cluster:6379)",
+    "2026-09-07 10:14:06.340 [payment-gateway-worker-3] [ERROR] [payment-gateway] PaymentGatewayException: Upstream payment processor rejected auth token: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c for customer SSN: 123-45-6789 with API Key AIzaSyD-894729487294829472948294829",
+    "2026-09-07 10:14:06.912 [zeebe-broker-0] [FATAL] [orderFulfillmentProcess] UNHANDLED_ERROR_EVENT: Expected to throw an error event with the code 'PAYMENT_FAILED' with message 'PaymentGatewayException: Card authorization failed for card 4532-1488-1234-5678 with secret token AIzaSyD-894729487294829472948294829', but it was not caught. No error events are available in the scope of element 'Activity_ProcessPayment'."
+  ],
+  "timeline": [
+    "10:14:01 \u2014 .215 [order-fulfillment-worker-1] [INFO] [orderFulfillmentProcess] Starting process instance on Camunda 8.9 for customer",
+    "10:14:01 \u2014 .450 [order-fulfillment-worker-1] [INFO] [orderFulfillmentProcess] Navigated from StartEvent_1 to ServiceTask_ProcessPay",
+    "10:14:02 \u2014 .110 [payment-gateway-worker-3] [INFO] [payment-gateway] Processing payment transaction for customerId: CUST-9921, card:",
+    "10:14:04 \u2014 .882 [payment-gateway-worker-3] [WARN] [payment-gateway] Redis session cache connection pool timeout (LettuceConnectionE",
+    "10:14:06 \u2014 .340 [payment-gateway-worker-3] [ERROR] [payment-gateway] PaymentGatewayException: Upstream payment processor rejected a"
+  ],
+  "severity": "high",
+  "timestamp": null,
+  "variables": {},
+  "bpmn_topology": null,
+  "element_id": "",
+  "element_name": null,
+  "process_id": null,
+  "instance_key": "",
+  "incident_key": null,
+  "camunda_version": "8.9",
+  "request": "Investigate UNHANDLED_ERROR_EVENT in orderFulfillmentProcess (production) on Camunda 8.9"
+}

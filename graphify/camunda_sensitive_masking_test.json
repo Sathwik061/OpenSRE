@@ -1,0 +1,41 @@
+{
+  "service": "orderFulfillmentProcess",
+  "environment": "production",
+  "severity": "critical",
+  "error_type": "UNHANDLED_ERROR_EVENT",
+  "camunda_version": "8.9",
+  "error_message": "Expected to throw an error event with the code 'PAYMENT_FAILED' with message 'PaymentGatewayException: Card authorization failed for card 4532-1488-1234-5678 with secret token AIzaSyD-894729487294829472948294829', but it was not caught.",
+  "element_id": "Activity_ProcessPayment",
+  "instance_key": "2251799813743477",
+  "incident_key": "2251799813743496",
+  "variables": {
+    "orderId": "ORD-88219",
+    "customerId": "CUST-9921",
+    "orderAmount": 1450.50,
+    "currency": "USD",
+    "status": "PENDING_PAYMENT",
+    "shippingAddress": "123 Market St, San Francisco, CA",
+    "creditCard": "4532-1488-1234-5678",
+    "cvv": 452,
+    "ssn": "123-45-6789",
+    "password": "AdminSuperSecretPassword99!",
+    "apiKey": "AIzaSyD-894729487294829472948294829",
+    "bearerToken": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+    "databaseUrl": "postgres://db_admin:superSecretDbPass99@db.prod.internal:5432/orders_db"
+  },
+  "logs": [
+    "2026-09-07 10:14:01.215 [order-fulfillment-worker-1] [INFO] [orderFulfillmentProcess] Starting process instance for customerId: CUST-9921, orderId: ORD-88219, orderAmount: $1450.50, currency: USD",
+    "2026-09-07 10:14:01.450 [order-fulfillment-worker-1] [INFO] [orderFulfillmentProcess] Navigated from StartEvent_1 to ServiceTask_ProcessPayment (elementId: Activity_ProcessPayment)",
+    "2026-09-07 10:14:02.110 [payment-gateway-worker-3] [INFO] [payment-gateway] Processing payment transaction for customerId: CUST-9921, card: 4532-1488-1234-5678, cvv: 452, exp: 12/28",
+    "2026-09-07 10:14:04.882 [payment-gateway-worker-3] [WARN] [payment-gateway] Redis session cache connection pool timeout (LettuceConnectionException: Unable to connect to redis-cluster:6379 after 2000ms with auth: postgres://admin:SuperSecretDbPassword99@redis-cluster:6379)",
+    "2026-09-07 10:14:06.340 [payment-gateway-worker-3] [ERROR] [payment-gateway] PaymentGatewayException: Upstream payment processor rejected auth token: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c for customer SSN: 123-45-6789 with API Key AIzaSyD-894729487294829472948294829",
+    "2026-09-07 10:14:06.912 [zeebe-broker-0] [FATAL] [orderFulfillmentProcess] UNHANDLED_ERROR_EVENT: Expected to throw an error event with the code 'PAYMENT_FAILED' with message 'PaymentGatewayException: Card authorization failed for card 4532-1488-1234-5678 with secret token AIzaSyD-894729487294829472948294829', but it was not caught. No error events are available in the scope of element 'Activity_ProcessPayment'."
+  ],
+  "timeline": [
+    "10:14:01 — Starting process instance for customerId: CUST-9921, orderId: ORD-88219",
+    "10:14:02 — Processing payment transaction on Activity_ProcessPayment",
+    "10:14:04 — Redis session cache connection pool timeout (LettuceConnectionException)",
+    "10:14:06 — Upstream payment processor rejected auth token",
+    "10:14:06 — UNHANDLED_ERROR_EVENT thrown with code PAYMENT_FAILED"
+  ]
+}

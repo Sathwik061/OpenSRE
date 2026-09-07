@@ -13,6 +13,7 @@ from sentinel.core.models import IncidentAlert, ErrorEvent
 from sentinel.core.incident_builder import build_incident_from_error
 from sentinel.core.investigator import run_investigation
 from sentinel.core.state_store import store
+from sentinel.core.masking import mask_incident_payload
 
 logger = logging.getLogger("sentinel.api.rca")
 
@@ -23,7 +24,8 @@ def _run_in_background(inv_id: str, incident: IncidentAlert) -> None:
     """Executes the investigation asynchronously in the background."""
     store.set_status(inv_id, "running")
     try:
-        res = run_investigation(incident)
+        sanitized_incident = mask_incident_payload(incident)
+        res = run_investigation(sanitized_incident)
         store.set_result(
             inv_id,
             res.model_dump(),
@@ -56,11 +58,12 @@ def investigate(incident: IncidentAlert, background_tasks: BackgroundTasks):
     Submit a fully-formed IncidentAlert for RCA.
     Runs asynchronously in the background. Poll /investigations/{id} for result.
     """
+    sanitized = mask_incident_payload(incident)
     inv_id = str(uuid4())[:8]
-    ver = incident.camunda_version or os.getenv("CAMUNDA_VERSION", "8.9")
-    logger.info(f"[investigate] {incident.alert_name} (Camunda {ver}) -> id={inv_id}")
+    ver = sanitized.camunda_version or os.getenv("CAMUNDA_VERSION", "8.9")
+    logger.info(f"[investigate] {sanitized.alert_name} (Camunda {ver}) -> id={inv_id}")
     store.set_status(inv_id, "running")
-    background_tasks.add_task(_run_in_background, inv_id, incident)
+    background_tasks.add_task(_run_in_background, inv_id, sanitized)
     return {
         "status": "accepted",
         "investigation_id": inv_id,
@@ -103,39 +106,8 @@ def list_investigations():
 @router.get("/investigations/{inv_id}")
 def get_investigation(inv_id: str):
     """
-    Retrieve the result or status of a specific investigation.
-    Checks Supabase instance store first, then in-memory results.
+    Retrieve the result or status of a specific investigation from in-memory state store.
     """
-    # 1. Authoritative check: Supabase Instance Store
-    try:
-        from sentinel.knowledge.supabase_runbook import lookup_instance_rca, is_configured as sb_configured
-        if sb_configured():
-            sb_rca = lookup_instance_rca(inv_id)
-            if sb_rca and sb_rca.get("root_cause"):
-                res_obj = {
-                    "instance_key": inv_id,
-                    "processInstanceKey": inv_id,
-                    "incident_key": sb_rca.get("_incident_key") or inv_id,
-                    "status": "success",
-                    "incident": sb_rca.get("error_type", "Camunda Incident"),
-                    "rca": {
-                        "summary": sb_rca.get("summary"),
-                        "root_cause": sb_rca.get("root_cause"),
-                        "confidence": sb_rca.get("confidence", "HIGH"),
-                        "observed_facts": sb_rca.get("observed_facts") or [],
-                        "evidence": sb_rca.get("evidence") or [sb_rca.get("root_cause")],
-                        "recommended_actions": sb_rca.get("recommended_actions") or [],
-                        "topology_warnings": sb_rca.get("topology_warnings") or [],
-                        "documentation_references": sb_rca.get("documentation_references") or [],
-                    },
-                    "source": "supabase_dgx",
-                }
-                store.set_result(inv_id, res_obj)
-                return res_obj
-    except Exception as e:
-        logger.debug(f"Supabase lookup error for {inv_id}: {e}")
-
-    # 2. Check in-memory store
     status = store.get_status(inv_id)
     result = store.get_result(inv_id)
 

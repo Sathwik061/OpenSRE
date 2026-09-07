@@ -1,0 +1,40 @@
+{
+  "alert_name": "UNHANDLED_ERROR_EVENT in orderFulfillmentProcess",
+  "service": "orderFulfillmentProcess",
+  "environment": "production",
+  "error": "UNHANDLED_ERROR_EVENT",
+  "error_message": "[WARN] [payment-gateway] Redis connection pool timeout (LettuceConnectionException: Unable to connect to redis-cluster:6379 after 2000ms)",
+  "logs": [
+    "2026-09-07 10:14:01.215 [order-fulfillment-worker-1] [INFO] [orderFulfillmentProcess] Starting process instance on Camunda 8.5.6 (instanceKey: 2251799813720194, bpmnProcessId: orderFulfillmentProcess)",
+    "2026-09-07 10:14:01.450 [order-fulfillment-worker-1] [INFO] [orderFulfillmentProcess] Navigated from StartEvent_1 to ServiceTask_ProcessPayment (elementId: Activity_ProcessPayment)",
+    "2026-09-07 10:14:02.110 [payment-gateway-worker-3] [INFO] [payment-gateway] Processing payment transaction for customerId: CUST-88219, orderAmount: $890.50, currency: USD",
+    "2026-09-07 10:14:04.882 [payment-gateway-worker-3] [WARN] [payment-gateway] Redis connection pool timeout (LettuceConnectionException: Unable to connect to redis-cluster:6379 after 2000ms)",
+    "2026-09-07 10:14:06.340 [payment-gateway-worker-3] [ERROR] [payment-gateway] PaymentGatewayException: Upstream payment provider rejected transaction with response code ERR_PAYMENT_DECLINED (insufficient credit limit or gateway timeout)",
+    "com.truviq.billing.exception.PaymentGatewayException: Payment processing failed for transaction TX-99104",
+    "\tat com.truviq.billing.service.PaymentProcessor.executePayment(PaymentProcessor.java:142)",
+    "\tat com.truviq.billing.worker.CamundaJobWorker.handleJob(CamundaJobWorker.java:77)",
+    "\tat io.camunda.zeebe.client.impl.worker.JobRunnableFactory.execute(JobRunnableFactory.java:45)",
+    "2026-09-07 10:14:07.120 [payment-gateway-worker-3] [ERROR] [payment-gateway] Throwing BPMN Error with code 'PAYMENT_FAILED' and message 'Payment declined: insufficient funds or provider timeout'",
+    "2026-09-07 10:14:07.891 [zeebe-cluster-node-1] [FATAL] [orderFulfillmentProcess] UNHANDLED_ERROR_EVENT in orderFulfillmentProcess (instanceKey: 2251799813720194, incidentKey: 2251799813720210, elementId: Activity_ProcessPayment, engineVersion: Camunda 8.5.6)",
+    "Expected to throw an error event with the code 'PAYMENT_FAILED' with message 'Payment processing failed for transaction TX-99104. Upstream payment provider rejected transaction with response code ERR_PAYMENT_DECLINED', but it was not caught. No error boundary catch events are available in the scope of Activity_ProcessPayment.",
+    "2026-09-07 10:14:07.905 [zeebe-cluster-node-1] [WARN] [orderFulfillmentProcess] [TOPOLOGY_HAZARD] Process instance suspended on Camunda 8.5. Token cannot advance to Activity_FulfillOrder until incident is resolved or error boundary event is attached."
+  ],
+  "timeline": [
+    "10:14:01 \u2014 .215 [order-fulfillment-worker-1] [INFO] [orderFulfillmentProcess] Starting process instance on Camunda 8.5.6 (instanceK",
+    "10:14:01 \u2014 .450 [order-fulfillment-worker-1] [INFO] [orderFulfillmentProcess] Navigated from StartEvent_1 to ServiceTask_ProcessPay",
+    "10:14:02 \u2014 .110 [payment-gateway-worker-3] [INFO] [payment-gateway] Processing payment transaction for customerId: CUST-88219, orde",
+    "10:14:04 \u2014 .882 [payment-gateway-worker-3] [WARN] [payment-gateway] Redis connection pool timeout (LettuceConnectionException: Unab",
+    "10:14:06 \u2014 .340 [payment-gateway-worker-3] [ERROR] [payment-gateway] PaymentGatewayException: Upstream payment provider rejected tr"
+  ],
+  "severity": "high",
+  "timestamp": null,
+  "variables": null,
+  "bpmn_topology": null,
+  "element_id": null,
+  "element_name": null,
+  "process_id": null,
+  "instance_key": null,
+  "incident_key": null,
+  "camunda_version": "8.5",
+  "request": "Investigate UNHANDLED_ERROR_EVENT in orderFulfillmentProcess (production) on Camunda 8.5"
+}

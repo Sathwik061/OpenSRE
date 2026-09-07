@@ -1,0 +1,23 @@
+{
+  "alert_name": "UNHANDLED_ERROR_EVENT in orderFulfillmentProcess",
+  "service": "orderFulfillmentProcess",
+  "environment": "production",
+  "error": "UNHANDLED_ERROR_EVENT",
+  "error_message": "Expected to throw an error event with the code PAYMENT_FAILED in orderFulfillmentProcess, but it was not caught",
+  "logs": [
+    "2026-09-07 [ERROR] PaymentGatewayException: Upstream payment provider rejected transaction",
+    "2026-09-07 [FATAL] UNHANDLED_ERROR_EVENT on Camunda 8.5.6 Activity_ProcessPayment"
+  ],
+  "timeline": [],
+  "severity": "high",
+  "timestamp": null,
+  "variables": null,
+  "bpmn_topology": null,
+  "element_id": null,
+  "element_name": null,
+  "process_id": null,
+  "instance_key": null,
+  "incident_key": null,
+  "camunda_version": "8.5",
+  "request": "Determine what failed, identify the most likely root cause using the supplied evidence, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}

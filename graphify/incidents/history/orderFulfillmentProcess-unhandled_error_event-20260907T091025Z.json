@@ -1,0 +1,24 @@
+{
+  "alert_name": "orderFulfillmentProcess-unhandled_error_event",
+  "service": "orderFulfillmentProcess",
+  "environment": "production",
+  "error": "UNHANDLED_ERROR_EVENT",
+  "error_message": "Expected to throw an error event with the code PAYMENT_FAILED but it was not caught",
+  "logs": [
+    "[WARN] [payment-gateway] Redis connection pool timeout (LettuceConnectionException: Unable to connect to redis-cluster:6379 after 2000ms)"
+  ],
+  "timeline": [
+    "[WARN] [payment-gateway] Redis connection pool timeout (LettuceConnectionExcepti"
+  ],
+  "severity": "high",
+  "timestamp": "2026-09-07T09:10:25Z",
+  "variables": null,
+  "bpmn_topology": null,
+  "element_id": null,
+  "element_name": null,
+  "process_id": null,
+  "instance_key": null,
+  "incident_key": null,
+  "camunda_version": "8.5",
+  "request": "Determine what failed, identify the most likely root cause using the supplied evidence, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}
