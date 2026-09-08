@@ -1,0 +1,157 @@
+[
+  {
+    "id": "proj_order_fulfillment",
+    "name": "Global Order Fulfillment Pipeline",
+    "service_id": "orderFulfillmentProcess",
+    "purpose": "Orchestrates high-volume global B2B & B2C customer checkout, verifies credit card authorizations with payment gateways, reserves warehouse inventory, and handles shipment fulfillment.",
+    "platform": "camunda_8",
+    "platform_version": "8.9",
+    "environment": "production",
+    "owner_team": "Checkout & SRE Core",
+    "dependencies": [
+      {
+        "name": "payment-gateway-service",
+        "type": "service",
+        "endpoint": "https://api.payments.prod.internal",
+        "critical": true
+      },
+      {
+        "name": "redis-session-cluster",
+        "type": "cache",
+        "endpoint": "redis-cluster:6379",
+        "critical": true
+      },
+      {
+        "name": "inventory-postgres-db",
+        "type": "database",
+        "endpoint": "postgres.orders.prod.internal:5432",
+        "critical": true
+      }
+    ],
+    "attached_runbook_ids": [
+      "unhandled-error-event",
+      "io-mapping-error"
+    ],
+    "notifications": {
+      "slack_webhook": "",
+      "teams_webhook": null,
+      "discord_webhook": null,
+      "pagerduty_key": null,
+      "jira_project_key": "ORDER",
+      "servicenow_instance": null
+    },
+    "created_at": "2026-09-07T17:36:52.411385+00:00",
+    "updated_at": "2026-09-07T17:36:52.411385+00:00",
+    "metadata": {}
+  },
+  {
+    "id": "proj_underwriting_engine",
+    "name": "Underwriting & Policy Issuance Engine",
+    "service_id": "underwriting-policy-issuance",
+    "purpose": "Executes real-time actuarial risk modeling and dynamic DMN policy pricing for auto and home insurance applications.",
+    "platform": "camunda_8",
+    "platform_version": "8.9",
+    "environment": "production",
+    "owner_team": "Underwriting Platform",
+    "dependencies": [
+      {
+        "name": "credit-bureau-api",
+        "type": "external_api",
+        "endpoint": "https://api.creditbureau.internal",
+        "critical": true
+      },
+      {
+        "name": "policy-pricing-dmn",
+        "type": "service",
+        "endpoint": null,
+        "critical": true
+      }
+    ],
+    "attached_runbook_ids": [
+      "decision-evaluation-error"
+    ],
+    "notifications": {
+      "slack_webhook": null,
+      "teams_webhook": null,
+      "discord_webhook": null,
+      "pagerduty_key": null,
+      "jira_project_key": null,
+      "servicenow_instance": null
+    },
+    "created_at": "2026-09-07T17:36:52.411385+00:00",
+    "updated_at": "2026-09-07T17:36:52.411385+00:00",
+    "metadata": {}
+  },
+  {
+    "id": "proj_pega_claims_intake",
+    "name": "Pega Claims Intake & Adjudication",
+    "service_id": "pega-claims-intake",
+    "purpose": "Handles multi-channel first notice of loss (FNOL), customer case routing, and automated SLA claims resolution on Pega PRPC.",
+    "platform": "pega",
+    "platform_version": "8.8",
+    "environment": "production",
+    "owner_team": "Claims Ops",
+    "dependencies": [
+      {
+        "name": "pega-prpc-cluster",
+        "type": "service",
+        "endpoint": "https://pega.prod.internal:8443",
+        "critical": true
+      },
+      {
+        "name": "claims-oracle-db",
+        "type": "database",
+        "endpoint": null,
+        "critical": true
+      }
+    ],
+    "attached_runbook_ids": [],
+    "notifications": {
+      "slack_webhook": null,
+      "teams_webhook": null,
+      "discord_webhook": null,
+      "pagerduty_key": null,
+      "jira_project_key": null,
+      "servicenow_instance": null
+    },
+    "created_at": "2026-09-07T17:36:52.411385+00:00",
+    "updated_at": "2026-09-07T17:36:52.411385+00:00",
+    "metadata": {}
+  },
+  {
+    "id": "proj_k8s_microservices",
+    "name": "Core Banking Kubernetes Microservices",
+    "service_id": "banking-core-api",
+    "purpose": "Containerized microservice fleet on EKS executing real-time account ledger postings and transaction auditing.",
+    "platform": "kubernetes",
+    "platform_version": "1.30",
+    "environment": "production",
+    "owner_team": "Cloud Infra & Core Banking",
+    "dependencies": [
+      {
+        "name": "kafka-event-bus",
+        "type": "message_broker",
+        "endpoint": "kafka-cluster:9092",
+        "critical": true
+      },
+      {
+        "name": "postgresql-primary",
+        "type": "database",
+        "endpoint": "pg-primary:5432",
+        "critical": true
+      }
+    ],
+    "attached_runbook_ids": [],
+    "notifications": {
+      "slack_webhook": null,
+      "teams_webhook": null,
+      "discord_webhook": null,
+      "pagerduty_key": null,
+      "jira_project_key": null,
+      "servicenow_instance": null
+    },
+    "created_at": "2026-09-07T17:36:52.411385+00:00",
+    "updated_at": "2026-09-07T17:36:52.411385+00:00",
+    "metadata": {}
+  }
+]

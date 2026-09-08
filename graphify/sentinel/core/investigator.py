@@ -128,6 +128,15 @@ def _generate_local_rag_rca(incident: IncidentAlert, camunda_version: str) -> di
     instance_key = getattr(incident, "instance_key", None) or ""
     bpmn_topology = getattr(incident, "bpmn_topology", None)
 
+    # 0. Contextualize with Project Passport (Why it was built, Business Intent, Dependencies)
+    project = None
+    try:
+        from sentinel.core.project_store import project_store
+        proj_id = getattr(incident, "project_id", None)
+        project = project_store.get(proj_id) if proj_id else project_store.fuzzy_match(service)
+    except Exception as e:
+        logger.debug(f"Project passport lookup skipped: {e}")
+
     # 1. Retrieve knowledge context & docs
     rag_context = retrieve_camunda_context(
         error_type=err_type,
@@ -159,8 +168,13 @@ def _generate_local_rag_rca(incident: IncidentAlert, camunda_version: str) -> di
     # 4. Formulate observed facts
     observed_facts = [
         f"Incident detected in service '{service}' with error type '{err_type}'",
-        f"Target Camunda Engine Version: Camunda {camunda_version}",
+        f"Target Engine / Platform: {project.target_platform if project else f'Camunda {camunda_version}'}",
     ]
+    if project:
+        observed_facts.append(f"Project Intent: {project.business_purpose}")
+        if project.dependencies:
+            deps_str = ", ".join([f"{d.name} ({'Critical' if d.critical else 'Standard'})" for d in project.dependencies])
+            observed_facts.append(f"Architectural Dependencies: {deps_str}")
     if sop and isinstance(sop, dict) and sop.get("title"):
         observed_facts.append(f"Referenced SRE Runbook: {sop.get('title')}")
     if instance_key:
@@ -223,7 +237,7 @@ def _generate_local_rag_rca(incident: IncidentAlert, camunda_version: str) -> di
             if rec_text and rec_text not in recommended_actions:
                 recommended_actions.insert(0, rec_text)
 
-    # 8. Documentation references
+    # 8. Documentation references & Always-On Web Search Intelligence
     doc_refs = []
     for c in rag_context.get("citations_catalog", []):
         doc_refs.append({
@@ -232,6 +246,7 @@ def _generate_local_rag_rca(incident: IncidentAlert, camunda_version: str) -> di
             "relevance": c.get("relevance", f"Camunda {camunda_version} official architecture rule"),
             "camunda_version": camunda_version,
             "version": camunda_version,
+            "source": "Local Knowledge Catalog",
         })
     if not doc_refs:
         for d in rag_context.get("docs", []):
@@ -241,10 +256,42 @@ def _generate_local_rag_rca(incident: IncidentAlert, camunda_version: str) -> di
                 "relevance": d.get("relevance", f"Camunda {camunda_version} official architecture rule"),
                 "camunda_version": camunda_version,
                 "version": camunda_version,
+                "source": "Local Knowledge Catalog",
             })
 
+    # Execute Always-On Web Search in parallel
+    web_citations = []
+    try:
+        from sentinel.knowledge.web_search_client import web_search_client
+        import asyncio
+        import concurrent.futures
+        platform_hint = project.target_platform if project else f"Camunda {camunda_version}"
+        web_query = f"{platform_hint} {err_type} {raw_msg[:70]}"
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            web_citations = pool.submit(
+                asyncio.run,
+                web_search_client.search_error_solutions(web_query, platform=platform_hint)
+            ).result(timeout=4.5)
+    except Exception as e:
+        logger.debug(f"Web search execution fell back: {e}")
+        try:
+            from sentinel.knowledge.web_search_client import web_search_client
+            web_citations = web_search_client._generate_canonical_fallbacks(f"{err_type}", platform=project.target_platform if project else "Camunda")
+        except Exception:
+            web_citations = []
+
+    # Merge web citations into documentation references with badge
+    for wc in web_citations:
+        doc_refs.append({
+            "section": wc.get("title", "External Reference"),
+            "url": wc.get("url", "#"),
+            "relevance": wc.get("snippet", "Community troubleshooting guideline"),
+            "source": wc.get("source", "Live Web Search"),
+            "version": camunda_version,
+        })
+
     return {
-        "summary": f"{err_type} in {service} on Camunda {camunda_version}",
+        "summary": f"{err_type} in {service} on {project.target_platform if project else f'Camunda {camunda_version}'}",
         "root_cause": root_cause,
         "confidence": "HIGH" if evidence else "MEDIUM",
         "observed_facts": observed_facts,
@@ -252,5 +299,7 @@ def _generate_local_rag_rca(incident: IncidentAlert, camunda_version: str) -> di
         "recommended_actions": recommended_actions,
         "topology_warnings": topology_warnings,
         "documentation_references": doc_refs,
+        "web_references": web_citations,
+        "project_passport": project.model_dump() if project else None,
         "camunda_version": camunda_version,
     }

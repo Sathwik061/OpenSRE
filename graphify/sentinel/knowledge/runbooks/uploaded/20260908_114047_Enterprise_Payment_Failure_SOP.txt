@@ -1,0 +1,8 @@
+# Enterprise Payment Failure Runbook
+
+## Symptom
+When Stripe API times out with 504.
+
+## Remediation
+1. Switch to secondary payment rail.
+2. Scale connection timeout from 5s to 15s.

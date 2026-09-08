@@ -22,8 +22,11 @@ for p in [_sentinel_dir, _graphify_dir]:
 from sentinel.api import (
     rca_router,
     camunda_proxy_router,
+    runbook_upload_router,
     runbook_router,
     dgx_router,
+    project_router,
+    integration_router,
 )
 from sentinel.camunda.bridge_watcher import run_bridge
 
@@ -49,8 +52,11 @@ app.add_middleware(
 # ── Mount Domain API Routers ──────────────────────────────────────────────────
 app.include_router(rca_router)
 app.include_router(camunda_proxy_router)
+app.include_router(runbook_upload_router)
 app.include_router(runbook_router)
 app.include_router(dgx_router)
+app.include_router(project_router)
+app.include_router(integration_router)
 
 
 # ── Embedded Camunda Watcher Background Thread ────────────────────────────────

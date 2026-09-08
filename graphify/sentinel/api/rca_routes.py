@@ -53,6 +53,7 @@ def health():
 
 
 @router.post("/investigate", status_code=202)
+@router.post("/api/investigate", status_code=202)
 def investigate(incident: IncidentAlert, background_tasks: BackgroundTasks):
     """
     Submit a fully-formed IncidentAlert for RCA.
@@ -104,6 +105,7 @@ def list_investigations():
 
 
 @router.get("/investigations/{inv_id}")
+@router.get("/api/investigations/{inv_id}")
 def get_investigation(inv_id: str):
     """
     Retrieve the result or status of a specific investigation from in-memory state store.

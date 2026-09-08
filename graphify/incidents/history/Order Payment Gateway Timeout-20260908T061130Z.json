@@ -1,0 +1,23 @@
+{
+  "alert_name": "Order Payment Gateway Timeout",
+  "service": "orderFulfillmentProcess",
+  "environment": "production",
+  "error": "UNHANDLED_ERROR_EVENT",
+  "error_message": "PaymentGatewayTimeout: 504 Gateway Timeout connecting to Stripe processor",
+  "logs": [
+    "[FATAL] [orderFulfillmentProcess] PaymentGatewayTimeout: Stripe gateway connection timed out",
+    "[ERROR] [orderFulfillmentProcess] UNHANDLED_ERROR_EVENT: Task 'Activity_ProcessPayment' failed"
+  ],
+  "timeline": [],
+  "severity": "high",
+  "timestamp": null,
+  "variables": null,
+  "bpmn_topology": null,
+  "element_id": null,
+  "element_name": null,
+  "process_id": null,
+  "instance_key": null,
+  "incident_key": null,
+  "camunda_version": "8.9",
+  "request": "Determine what failed, identify the most likely root cause using the supplied evidence, explain the evidence, and recommend a safe remediation. Do not execute any remediation."
+}

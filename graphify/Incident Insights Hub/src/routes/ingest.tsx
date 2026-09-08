@@ -1,11 +1,26 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
-import { BrainCircuit, FlaskConical, Loader2, Plus, Save, Trash2, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  BrainCircuit,
+  FlaskConical,
+  Loader2,
+  Plus,
+  Save,
+  Trash2,
+  Upload,
+  Briefcase,
+  FileText,
+  FileCode,
+  UploadCloud,
+  CheckCircle2,
+  Globe,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -50,6 +65,11 @@ function IngestPage() {
   const { config, refreshHistory } = useApp();
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [projects, setProjects] = useState<any[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("none");
+  const [activeProject, setActiveProject] = useState<any>(null);
+  const [uploadedRunbooks, setUploadedRunbooks] = useState<string[]>([]);
+
   const [service, setService] = useState("");
   const [environment, setEnvironment] = useState<Environment>("production");
   const [severity, setSeverity] = useState<Severity>("high");
@@ -65,6 +85,31 @@ function IngestPage() {
   const [progress, setProgress] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [customTemplates, setCustomTemplates] = useState<IncidentCase[]>(() => getTemplates());
+
+  useEffect(() => {
+    fetch(`${config.sentinelUrl || "http://localhost:5000"}/api/projects`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.projects) setProjects(data.projects);
+      })
+      .catch(() => {});
+  }, [config.sentinelUrl]);
+
+  function handleSelectProject(projId: string) {
+    setSelectedProjectId(projId);
+    if (projId === "none") {
+      setActiveProject(null);
+      return;
+    }
+    const found = projects.find((p) => p.id === projId);
+    if (found) {
+      setActiveProject(found);
+      setService(found.name);
+      setEnvironment(found.environment as Environment);
+      if (found.platform_version) setCamundaVersion(found.platform_version);
+      toast.success(`Context loaded from Project Passport: ${found.name}`);
+    }
+  }
 
   function applyCase(id: string) {
     if (id === "custom_blank") {
@@ -101,6 +146,35 @@ function IngestPage() {
   }
 
   async function handleFile(file: File) {
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (ext === "pdf" || ext === "docx" || ext === "doc") {
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        if (selectedProjectId && selectedProjectId !== "none") {
+          formData.append("project_id", selectedProjectId);
+        }
+        formData.append("title", file.name);
+        const res = await fetch(`${config.sentinelUrl || "http://localhost:5000"}/api/runbooks/upload`, {
+          method: "POST",
+          body: formData,
+        });
+        if (res.ok) {
+          const up = await res.json();
+          setUploadedRunbooks((prev) => [...prev, file.name]);
+          toast.success(`Runbook uploaded & indexed (${up.chunks_indexed || 1} chunks)`, {
+            description: `${file.name} is now active for local AI RAG`,
+          });
+          return;
+        } else {
+          toast.error("Failed to parse runbook document.");
+        }
+      } catch (err: any) {
+        toast.error("Error uploading document: " + err.message);
+      }
+      return;
+    }
+
     try {
       const rawText = await file.text();
       // 1. Try parsing as JSON first
@@ -304,6 +378,7 @@ function IngestPage() {
       element_id: elementId,
       instance_key: instanceKey,
       variables: maskedVariables,
+      project_id: selectedProjectId !== "none" ? selectedProjectId : undefined,
       request: `Investigate ${errorType} in ${service} (${environment}) on Camunda ${camundaVersion}`,
     };
 
@@ -407,6 +482,72 @@ function IngestPage() {
           </SelectContent>
         </Select>
       </header>
+
+      {/* Project Passport Context & Multi-Format Runbook Ingestion Banner */}
+      <section className="animate-fade-up rounded-lg border border-primary/20 bg-primary/5 p-4 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <span className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <Briefcase className="size-4" />
+            </span>
+            <div>
+              <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                Project Passport Context & Runbook Ingestion
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Link this incident to a registered service profile or upload PDF / Word runbooks for live RAG.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Select value={selectedProjectId} onValueChange={handleSelectProject}>
+              <SelectTrigger className="w-64 bg-background text-xs">
+                <SelectValue placeholder="Select Project Passport..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">-- Standalone Service --</SelectItem>
+                {projects.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    📁 {p.name} ({p.platform})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {activeProject && (
+          <div className="mt-3 rounded-md border border-primary/20 bg-background/80 p-3 text-xs leading-relaxed">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-primary">Operational Intent ("Why it was built"):</span>
+              <div className="flex items-center gap-1.5 font-mono text-[10px]">
+                <Badge variant="outline">{activeProject.platform}</Badge>
+                <Badge variant="outline" className="text-emerald-600">{activeProject.environment}</Badge>
+              </div>
+            </div>
+            <p className="mt-1 text-foreground/90">{activeProject.business_purpose}</p>
+            {activeProject.dependencies && activeProject.dependencies.length > 0 && (
+              <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                <span className="text-muted-foreground font-medium">Dependencies:</span>
+                {activeProject.dependencies.map((d: any, idx: number) => (
+                  <span key={idx} className="inline-flex items-center gap-1 rounded bg-secondary px-1.5 py-0.5 text-[10px]">
+                    <span className={`size-1.5 rounded-full ${d.critical ? 'bg-amber-500' : 'bg-muted-foreground'}`} />
+                    {d.name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {uploadedRunbooks.length > 0 && (
+          <div className="mt-2 flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+            <CheckCircle2 className="size-3.5" />
+            <span>Active Uploaded Runbooks: {uploadedRunbooks.join(", ")}</span>
+          </div>
+        )}
+      </section>
 
       <section className="animate-fade-up grid gap-4 rounded-lg border bg-card p-5 md:grid-cols-3">
         <div className="space-y-1.5">
@@ -555,12 +696,12 @@ function IngestPage() {
         onClick={() => fileRef.current?.click()}
       >
         <Upload className="mb-2 size-5 text-muted-foreground" />
-        <p className="text-sm font-medium">Drop a .log incident alert file</p>
-        <p className="text-xs text-muted-foreground">or click to browse (.log, .txt, .json)</p>
+        <p className="text-sm font-medium">Drop any incident log (.log, .json) or enterprise runbook (.pdf, .docx, .doc)</p>
+        <p className="text-xs text-muted-foreground">or click to browse — automatic multi-format parsing & local RAG indexing</p>
         <input
           ref={fileRef}
           type="file"
-          accept=".log,.txt,.json,text/plain,application/json"
+          accept=".log,.txt,.json,.pdf,.docx,.doc,text/plain,application/json,application/pdf"
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];

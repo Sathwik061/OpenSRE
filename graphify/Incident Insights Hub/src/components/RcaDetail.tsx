@@ -22,6 +22,9 @@ import {
   Trash2,
   Wrench,
   Zap,
+  Briefcase,
+  Globe,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -247,6 +250,33 @@ export function RcaDetail({
     }
   }
 
+  async function dispatchToChatOps() {
+    try {
+      const res = await fetch(`${config.sentinelUrl || "http://localhost:5000"}/api/integrations/dispatch-rca`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          incident_id: record.id,
+          service: record.service,
+          error_type: record.errorType,
+          severity: record.severity,
+          confidence: rca?.confidence || "HIGH",
+          root_cause: rca?.root_cause || record.errorMessage,
+        }),
+      });
+      const data = await res.json();
+      if (data.dispatched_channels && data.dispatched_channels.length > 0) {
+        toast.success(`Dispatched RCA alert to ${data.dispatched_channels.join(", ")}!`);
+      } else {
+        toast.info("No active ChatOps webhooks/bots configured.", {
+          description: "Connect Slack in the Integrations Hub to enable automated broadcasts.",
+        });
+      }
+    } catch (e) {
+      toast.error("Failed to broadcast RCA to chat channels.");
+    }
+  }
+
   function copyMarkdown() {
     const md = recordToMarkdown(record);
     void navigator.clipboard.writeText(md);
@@ -285,6 +315,9 @@ export function RcaDetail({
               <DropdownMenuLabel>Incident Operations</DropdownMenuLabel>
               <DropdownMenuItem onSelect={() => void runAnalysis()} disabled={running}>
                 <BrainCircuit className="size-4" /> Run AI Investigation
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => void dispatchToChatOps()}>
+                <Send className="size-4 text-primary" /> Dispatch to Slack / ChatOps
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => void resolveInCamunda()}
@@ -389,6 +422,45 @@ export function RcaDetail({
       {/* Structured Elaborate RCA Content */}
       {rca ? (
         <>
+          {/* Project Passport Context Banner */}
+          {rca.project_passport ? (
+            <section className="animate-fade-up rounded-lg border border-primary/20 bg-primary/5 p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Briefcase className="size-4 text-primary" />
+                  <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                    Project Passport: {rca.project_passport.name}
+                  </h3>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Badge variant="outline" className="capitalize text-[10px] font-mono">
+                    {rca.project_passport.platform}
+                  </Badge>
+                  <Badge variant="outline" className="text-[10px] font-mono text-emerald-600 border-emerald-500/30">
+                    {rca.project_passport.environment}
+                  </Badge>
+                </div>
+              </div>
+              <div className="text-xs leading-relaxed text-foreground/90 space-y-2">
+                <p>
+                  <span className="font-semibold text-primary">Business Intent ("Why it was built"): </span>
+                  {rca.project_passport.business_purpose}
+                </p>
+                {rca.project_passport.dependencies && rca.project_passport.dependencies.length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                    <span className="text-muted-foreground text-[11px]">Architecture Dependencies:</span>
+                    {rca.project_passport.dependencies.map((d: any, idx: number) => (
+                      <span key={idx} className="inline-flex items-center gap-1 rounded bg-background px-2 py-0.5 text-[10px] font-medium border">
+                        <span className={`size-1.5 rounded-full ${d.critical ? 'bg-amber-500' : 'bg-muted-foreground'}`} />
+                        {d.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          ) : null}
+
           {/* WHAT is the error? */}
           <Section title="❓ WHAT is the error?" icon={AlertTriangle} accent="text-rose-600">
             <p className="font-medium text-foreground leading-relaxed">{maskStringValue(rca.summary)}</p>
@@ -480,49 +552,55 @@ export function RcaDetail({
             </ol>
           </Section>
 
-          {/* Official Camunda Documentation References */}
+          {/* Official Documentation & Live Web Intelligence */}
           {rca.documentation_references && rca.documentation_references.length > 0 ? (
             <Section
-              title={`📚 Camunda ${rca.camunda_version || record.camunda_version || record.payload?.camunda_version || "8.9"} Documentation & Rules`}
+              title="📚 Architecture Guidelines & Web Intelligence"
               icon={BookOpen}
               accent="text-blue-600"
             >
               <div className="space-y-2.5">
                 {rca.documentation_references.map((doc, i) => {
-                  const docVer =
-                    doc.camunda_version ||
-                    rca.camunda_version ||
-                    record.camunda_version ||
-                    record.payload?.camunda_version ||
-                    "8.9";
+                  const isWeb = doc.source?.includes("Web") || doc.source?.includes("Live");
                   return (
                     <div
                       key={i}
-                      className="flex flex-col gap-1 rounded-md border border-blue-200/70 bg-blue-50/50 p-3 text-xs dark:border-blue-900/50 dark:bg-blue-950/20"
+                      className={`flex flex-col gap-1 rounded-md border p-3 text-xs ${
+                        isWeb
+                          ? "border-violet-200/70 bg-violet-50/50 dark:border-violet-900/50 dark:bg-violet-950/20"
+                          : "border-blue-200/70 bg-blue-50/50 dark:border-blue-900/50 dark:bg-blue-950/20"
+                      }`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-blue-900 dark:text-blue-300">
-                            {doc.section || doc.title || "Camunda Documentation"}
+                          {isWeb ? <Globe className="size-3.5 text-violet-500" /> : <BookOpen className="size-3.5 text-blue-500" />}
+                          <span className={`font-semibold ${isWeb ? "text-violet-900 dark:text-violet-300" : "text-blue-900 dark:text-blue-300"}`}>
+                            {doc.section || doc.title || "Reference"}
                           </span>
-                          <span className="rounded bg-blue-100 px-1.5 py-0.5 font-mono text-[9px] font-bold text-blue-800 dark:bg-blue-900/60 dark:text-blue-300">
-                            v{docVer}
+                          <span className={`rounded px-1.5 py-0.5 font-mono text-[9px] font-bold ${
+                            isWeb
+                              ? "bg-violet-100 text-violet-800 dark:bg-violet-900/60 dark:text-violet-300"
+                              : "bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300"
+                          }`}>
+                            {doc.source || "Official Doc"}
                           </span>
                         </div>
-                        {doc.url ? (
+                        {doc.url && doc.url !== "#" ? (
                           <a
                             href={doc.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 font-mono text-[11px] font-medium text-blue-600 hover:underline dark:text-blue-400"
+                            className={`inline-flex items-center gap-1 font-mono text-[11px] font-medium hover:underline ${
+                              isWeb ? "text-violet-600 dark:text-violet-400" : "text-blue-600 dark:text-blue-400"
+                            }`}
                           >
-                            View Official Doc <ExternalLink className="size-3" />
+                            Open Link <ExternalLink className="size-3" />
                           </a>
                         ) : null}
                       </div>
                       {doc.relevance ? (
-                        <p className="text-muted-foreground leading-relaxed">
-                          {doc.relevance}
+                        <p className="text-muted-foreground leading-relaxed mt-0.5">
+                          {maskStringValue(doc.relevance)}
                         </p>
                       ) : null}
                     </div>

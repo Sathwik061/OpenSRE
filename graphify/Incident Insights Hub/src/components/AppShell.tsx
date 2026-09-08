@@ -9,6 +9,8 @@ import {
   Settings,
   Sun,
   Workflow,
+  Briefcase,
+  Blocks,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { StatusDot } from "./StatusDot";
@@ -20,6 +22,8 @@ const NAV = [
   { to: "/incidents", label: "Incidents & RCA", icon: Radar },
   { to: "/history", label: "History", icon: Archive },
   { to: "/processes", label: "Processes", icon: Workflow },
+  { to: "/projects", label: "Project Passports", icon: Briefcase },
+  { to: "/integrations", label: "Integrations", icon: Blocks },
   { to: "/ingest", label: "Ingest Lab", icon: FlaskConical },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;

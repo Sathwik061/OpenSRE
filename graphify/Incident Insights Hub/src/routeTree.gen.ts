@@ -13,7 +13,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as IncidentsRouteImport } from './routes/incidents'
 import { Route as IngestRouteImport } from './routes/ingest'
+import { Route as IntegrationsRouteImport } from './routes/integrations'
 import { Route as ProcessesRouteImport } from './routes/processes'
+import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as SettingsRouteImport } from './routes/settings'
 
 const IndexRoute = IndexRouteImport.update({
@@ -36,9 +38,19 @@ const IngestRoute = IngestRouteImport.update({
   path: '/ingest',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IntegrationsRoute = IntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProcessesRoute = ProcessesRouteImport.update({
   id: '/processes',
   path: '/processes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsRoute = ProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -52,7 +64,9 @@ export interface FileRoutesByFullPath {
   '/history': typeof HistoryRoute
   '/incidents': typeof IncidentsRoute
   '/ingest': typeof IngestRoute
+  '/integrations': typeof IntegrationsRoute
   '/processes': typeof ProcessesRoute
+  '/projects': typeof ProjectsRoute
   '/settings': typeof SettingsRoute
 }
 export interface FileRoutesByTo {
@@ -60,7 +74,9 @@ export interface FileRoutesByTo {
   '/history': typeof HistoryRoute
   '/incidents': typeof IncidentsRoute
   '/ingest': typeof IngestRoute
+  '/integrations': typeof IntegrationsRoute
   '/processes': typeof ProcessesRoute
+  '/projects': typeof ProjectsRoute
   '/settings': typeof SettingsRoute
 }
 export interface FileRoutesById {
@@ -69,22 +85,41 @@ export interface FileRoutesById {
   '/history': typeof HistoryRoute
   '/incidents': typeof IncidentsRoute
   '/ingest': typeof IngestRoute
+  '/integrations': typeof IntegrationsRoute
   '/processes': typeof ProcessesRoute
+  '/projects': typeof ProjectsRoute
   '/settings': typeof SettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/history' | '/incidents' | '/ingest' | '/processes' | '/settings'
+    | '/'
+    | '/history'
+    | '/incidents'
+    | '/ingest'
+    | '/integrations'
+    | '/processes'
+    | '/projects'
+    | '/settings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/history' | '/incidents' | '/ingest' | '/processes' | '/settings'
+  to:
+    | '/'
+    | '/history'
+    | '/incidents'
+    | '/ingest'
+    | '/integrations'
+    | '/processes'
+    | '/projects'
+    | '/settings'
   id:
     | '__root__'
     | '/'
     | '/history'
     | '/incidents'
     | '/ingest'
+    | '/integrations'
     | '/processes'
+    | '/projects'
     | '/settings'
   fileRoutesById: FileRoutesById
 }
@@ -93,7 +128,9 @@ export interface RootRouteChildren {
   HistoryRoute: typeof HistoryRoute
   IncidentsRoute: typeof IncidentsRoute
   IngestRoute: typeof IngestRoute
+  IntegrationsRoute: typeof IntegrationsRoute
   ProcessesRoute: typeof ProcessesRoute
+  ProjectsRoute: typeof ProjectsRoute
   SettingsRoute: typeof SettingsRoute
 }
 
@@ -127,11 +164,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IngestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/integrations': {
+      id: '/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof IntegrationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/processes': {
       id: '/processes'
       path: '/processes'
       fullPath: '/processes'
       preLoaderRoute: typeof ProcessesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects': {
+      id: '/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof ProjectsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -149,7 +200,9 @@ const rootRouteChildren: RootRouteChildren = {
   HistoryRoute: HistoryRoute,
   IncidentsRoute: IncidentsRoute,
   IngestRoute: IngestRoute,
+  IntegrationsRoute: IntegrationsRoute,
   ProcessesRoute: ProcessesRoute,
+  ProjectsRoute: ProjectsRoute,
   SettingsRoute: SettingsRoute,
 }
 export const routeTree = rootRouteImport
